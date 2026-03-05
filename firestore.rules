@@ -1,26 +1,21 @@
 /**
- * Core Philosophy: This ruleset implements a strict, role-based access control (RBAC) model
- * for a single-tenant application. Access to all data is restricted to authenticated users
- * who are explicitly designated as administrators.
+ * Core Philosophy: This ruleset implements a security model for a single-tenant application.
+ * Access to all data is restricted to authenticated users. In this single-tenant context,
+ * any authenticated user is considered an administrator/owner of the data.
  *
  * Data Structure: The application data is organized into four top-level collections: /company,
- * /clients, /invoices, and /invoiceItems. A special, non-public /roles_admin collection is
- * used to manage administrator privileges.
+ * /clients, /invoices, and /invoiceItems.
  *
  * Key Security Decisions:
- * - Admin-Only Access: All read and write operations on business data are restricted to users
- *   whose UID exists in the /roles_admin collection.
- * - Server-Side Role Management: The /roles_admin collection is not writable by clients,
- *   ensuring that administrator roles can only be granted via a trusted server process or
- *   the Firebase Console.
+ * - Authenticated Access Only: All read and write operations on business data are restricted to
+ *   signed-in users.
  * - No Public Data: There are no publicly readable collections. All data is considered
- *   private to the company's administrators.
+ *   private to the company.
  *
- * Denormalization for Authorization: While authorization is primarily role-based, each document
- * in the /clients, /invoices, and /invoiceItems collections contains a denormalized 'companyId'
- * field. This enforces relational integrity, ensuring that all data is correctly associated
- * with the parent company, which is critical for data consistency and future scalability.
- * This field is validated to be present on creation and immutable on update.
+ * Denormalization for Authorization: Each document in the /clients, /invoices, and /invoiceItems
+ * collections contains a denormalized 'companyId' field. This enforces relational integrity,
+ * ensuring that all data is correctly associated with the parent company, which is critical for
+ * data consistency. This field is validated to be present on creation and immutable on update.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -38,12 +33,11 @@ service cloud.firestore {
     }
 
     /**
-     * Returns true if the user is an administrator.
-     * Admin status is determined by the existence of a document in the /roles_admin
-     * collection with an ID matching the user's UID.
+     * Returns true if the user is an "admin". For this single-tenant application,
+     * any authenticated user is considered an admin.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn();
     }
 
     /**
@@ -68,27 +62,6 @@ service cloud.firestore {
      */
     function companyIdIsImmutable() {
       return request.resource.data.companyId == resource.data.companyId;
-    }
-
-    // ------------------------------------------------------------------------
-    // Administrative Roles
-    // ------------------------------------------------------------------------
-
-    /**
-     * @description Manages administrator roles. This collection is intentionally locked
-     *              down from client-side writes to ensure roles are only managed by a
-     *              trusted server environment (e.g., Cloud Functions, Admin SDK).
-     * @path        /roles_admin/{uid}
-     * @allow       (none) No client is ever allowed to read or write to this collection.
-     * @deny        A client app attempting to (create) or (get) a document in this path.
-     * @principle   Enforces server-side management of user roles for maximum security.
-     */
-    match /roles_admin/{uid} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
     }
 
     // ------------------------------------------------------------------------
