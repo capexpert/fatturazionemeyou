@@ -17,14 +17,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Download, Edit, Copy } from "lucide-react";
+import { MoreHorizontal, Download, Edit, Copy, Trash2 } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, doc, writeBatch, getDocs, where } from "firebase/firestore";
 import type { Client, Invoice } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { format } from 'date-fns';
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Skeleton } from "./ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const statusVariant = {
     paid: 'default',
@@ -46,6 +57,10 @@ function downloadXml(xmlContent: string, fileName: string) {
 
 export function InvoicesTable() {
     const firestore = useFirestore();
+    const { toast } = useToast();
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+
 
     const invoicesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -73,6 +88,33 @@ export function InvoicesTable() {
 
     const isLoading = isLoadingInvoices || isLoadingClients;
 
+    async function handleDeleteInvoice() {
+        if (!invoiceToDelete || !firestore) return;
+        try {
+            const batch = writeBatch(firestore);
+    
+            // 1. Delete invoice items
+            const itemsQuery = query(collection(firestore, 'invoiceItems'), where('invoiceId', '==', invoiceToDelete.id));
+            const itemsSnapshot = await getDocs(itemsQuery);
+            itemsSnapshot.forEach(itemDoc => {
+                batch.delete(itemDoc.ref);
+            });
+    
+            // 2. Delete the invoice itself
+            const invoiceRef = doc(firestore, 'invoices', invoiceToDelete.id);
+            batch.delete(invoiceRef);
+    
+            await batch.commit();
+    
+            toast({ title: "Successo!", description: "Fattura eliminata." });
+        } catch (error) {
+            console.error("Error deleting invoice: ", error);
+            toast({ variant: 'destructive', title: 'Errore', description: 'Impossibile eliminare la fattura.' });
+        }
+        setDialogOpen(false);
+        setInvoiceToDelete(null);
+    }
+
     if (isLoading) {
       return (
           <Card>
@@ -88,66 +130,93 @@ export function InvoicesTable() {
     }
 
     return (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Numero</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Totale</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoicesWithClients.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.number}</TableCell>
-                    <TableCell>{invoice.client?.name}</TableCell>
-                    <TableCell>{format(new Date(invoice.date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{formatCurrency(invoice.total)}</TableCell>
-                    <TableCell>
-                      <Badge variant={invoice.status ? statusVariant[invoice.status] : 'outline'}>{invoice.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem 
-                            disabled={!invoice.xml_content}
-                            onClick={() => downloadXml(invoice.xml_content!, `Fattura_${invoice.number.replace('/', '-')}.xml`)}
-                          >
-                            <Download className="mr-2 h-4 w-4" />
-                            Scarica XML
-                          </DropdownMenuItem>
-                           <DropdownMenuItem disabled>
-                            <Download className="mr-2 h-4 w-4" />
-                            Scarica PDF
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/invoices/${invoice.id}/edit`}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Modifica
-                            </Link>
-                          </DropdownMenuItem>
-                           <DropdownMenuItem disabled>
-                            <Copy className="mr-2 h-4 w-4" />
-                            Duplica
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <>
+            <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Sei sicuro?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Questa azione non può essere annullata. Questo eliminerà permanentemente la fattura e tutti i suoi dati correlati.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Annulla</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteInvoice}>Elimina</AlertDialogAction>
+                </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <Card>
+            <CardContent className="p-0">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Numero</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Totale</TableHead>
+                    <TableHead>Stato</TableHead>
+                    <TableHead className="text-right">Azioni</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {invoicesWithClients.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">{invoice.number}</TableCell>
+                        <TableCell>{invoice.client?.name}</TableCell>
+                        <TableCell>{format(new Date(invoice.date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{formatCurrency(invoice.total)}</TableCell>
+                        <TableCell>
+                        <Badge variant={invoice.status ? statusVariant[invoice.status] : 'outline'}>{invoice.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                            <DropdownMenuItem 
+                                disabled={!invoice.xml_content}
+                                onClick={() => downloadXml(invoice.xml_content!, `Fattura_${invoice.number.replace('/', '-')}.xml`)}
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Scarica XML
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled>
+                                <Download className="mr-2 h-4 w-4" />
+                                Scarica PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href={`/invoices/${invoice.id}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Modifica
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Duplica
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                    setInvoiceToDelete(invoice);
+                                    setDialogOpen(true);
+                                }}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Elimina
+                            </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </CardContent>
+            </Card>
+        </>
     )
 }

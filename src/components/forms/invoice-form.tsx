@@ -37,7 +37,7 @@ import { useEffect, useState } from 'react';
 import { ClientForm } from './client-form';
 import { Separator } from '../ui/separator';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch, updateDoc, getDocs } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
 
@@ -80,7 +80,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
           client_id: '',
           date: new Date(),
           items: [
-            { id: '1', title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 },
+            { id: '', title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 },
           ],
         },
   });
@@ -144,9 +144,22 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
 
     try {
       const batch = writeBatch(firestore);
-      const isUpdate = !!data.id;
-      const invoiceId = data.id || doc(collection(firestore, 'invoices')).id;
+      const isUpdate = !!invoice?.id;
+      const invoiceId = invoice?.id || doc(collection(firestore, 'invoices')).id;
       const invoiceRef = doc(firestore, 'invoices', invoiceId);
+      
+      // Handle deleted items on update
+      if (isUpdate && invoice) {
+        const originalItemIds = invoice.items.map(i => i.id);
+        const currentFormItemIds = new Set(data.items.map(item => item.id).filter(Boolean));
+
+        for (const originalId of originalItemIds) {
+          if (!currentFormItemIds.has(originalId)) {
+            const itemToDeleteRef = doc(firestore, 'invoiceItems', originalId);
+            batch.delete(itemToDeleteRef);
+          }
+        }
+      }
       
       const invoiceData = {
         id: invoiceId,
@@ -165,7 +178,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
       batch.set(invoiceRef, invoiceData, { merge: true });
       
       data.items.forEach(item => {
-        const itemId = isUpdate && item.id ? item.id : doc(collection(firestore, 'invoiceItems')).id;
+        const itemId = item.id || doc(collection(firestore, 'invoiceItems')).id;
         const itemRef = doc(firestore, 'invoiceItems', itemId);
         batch.set(itemRef, {
           id: itemId,
@@ -255,8 +268,8 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSaveInvoice)} className="space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-1 gap-8">
+            <div className="col-span-1 space-y-8">
                 <Card>
                     <CardHeader>
                     <CardTitle>Dettagli Fattura</CardTitle>
@@ -483,14 +496,14 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
                         variant="outline"
                         size="sm"
                         className="mt-4"
-                        onClick={() => append({ id: `${fields.length+1}`, title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
+                        onClick={() => append({ id: '', title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
                     >
                         <PlusCircle className="mr-2 h-4 w-4" /> Aggiungi Articolo
                     </Button>
                     </CardContent>
                 </Card>
             </div>
-            <div className="lg:col-span-1">
+            <div className="col-span-1">
                  <Card>
                     <CardHeader>
                         <CardTitle>Riepilogo</CardTitle>
