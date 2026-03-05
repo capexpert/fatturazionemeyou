@@ -4,7 +4,7 @@ import {Toaster} from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'FatturaNow',
+  title: 'Fattura',
   description: 'Minimal invoicing web application for Italian companies.',
 };
 

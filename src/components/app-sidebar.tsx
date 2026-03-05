@@ -14,11 +14,11 @@ import {
   Users,
   Settings,
   LogOut,
-  FileDigit,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/firebase';
+import { Logo } from './logo';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,9 +38,8 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 p-2">
-          <FileDigit className="text-primary size-8" />
-          <span className="text-xl font-semibold">FatturaNow</span>
+        <div className="flex items-center justify-center p-2">
+          <Logo />
         </div>
       </SidebarHeader>
       <SidebarMenu>
