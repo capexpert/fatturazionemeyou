@@ -14,11 +14,11 @@ export default function EditInvoicePage() {
 
   const id = params?.id;
 
-  // Fetch invoice (which now includes items)
   const invoiceRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
     return doc(firestore, 'invoices', id);
   }, [firestore, id]);
+
   const { data: invoice, isLoading } = useDoc<Invoice>(invoiceRef);
 
   if (isLoading || !id) {

@@ -112,7 +112,7 @@ Guidelines:
 9.  Assume ModalitaPagamento 'MP05' (Bonifico) for DatiPagamento, and include the company's IBAN. The DataScadenzaPagamento can be the same as the invoice date.
 10. Ensure all numeric values are formatted correctly as decimals with a period separator (e.g., 12.34).
 11. If a client has neither vat_number nor tax_code, omit the corresponding XML fields in CessionarioCommittente/DatiAnagrafici.
-12. Your final output must be a JSON object with a single key "xml", where the value is the complete FatturaPA XML document as a string. Do not include any other text, comments, or explanations outside of this JSON structure.`,
+12. Your final output MUST be a valid JSON object. It must contain a single key "xml". The value for the "xml" key must be the complete FatturaPA XML document as a string. Do not include any other text, comments, markdown backticks, or explanations outside of this JSON structure. Example of a valid response: {"xml": "<?xml version=..."}`,
 });
 
 const generateFatturaPAXMLFlow = ai.defineFlow(
@@ -123,6 +123,11 @@ const generateFatturaPAXMLFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
-    return output!;
+    if (!output?.xml) {
+      // Log the failure and throw an error to be caught by the server action
+      console.error("FatturaPA XML generation failed: Model did not return valid XML in the expected format.", output);
+      throw new Error("Il modello AI non è riuscito a generare un output XML valido.");
+    }
+    return output;
   }
 );
