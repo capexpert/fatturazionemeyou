@@ -25,23 +25,31 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { saveClient } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { PlusCircle, Edit } from 'lucide-react';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 type ClientFormProps = {
   client?: Client;
+  companyId: string;
 };
 
-export function ClientForm({ client }: ClientFormProps) {
+// We omit 'id' and 'companyId' from the form values, as they are handled separately.
+type ClientFormData = Omit<Client, 'id' | 'companyId'>;
+
+export function ClientForm({ client, companyId }: ClientFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const firestore = useFirestore();
 
-  const form = useForm<Client>({
+  const form = useForm<ClientFormData>({
     resolver: zodResolver(ClientSchema),
-    defaultValues: client || {
+    defaultValues: client ? {
+      ...client
+    } : {
       name: '',
       vat_number: '',
       tax_code: '',
@@ -55,23 +63,33 @@ export function ClientForm({ client }: ClientFormProps) {
     },
   });
 
-  async function onSubmit(data: Client) {
-    try {
-      await saveClient({ ...client, ...data });
-      toast({
+  async function onSubmit(data: ClientFormData) {
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not available.' });
+      return;
+    }
+
+    const dataToSave = { ...data, companyId };
+    
+    if (client?.id) {
+      const clientRef = doc(firestore, 'clients', client.id);
+      setDocumentNonBlocking(clientRef, dataToSave, { merge: true });
+       toast({
         title: 'Success',
-        description: `Client ${client ? 'updated' : 'created'} successfully.`,
+        description: 'Client update initiated.',
       });
-      router.refresh();
-      setOpen(false);
-      form.reset();
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: `Failed to ${client ? 'update' : 'create'} client.`,
+    } else {
+      const clientsCollection = collection(firestore, 'clients');
+      addDocumentNonBlocking(clientsCollection, dataToSave);
+       toast({
+        title: 'Success',
+        description: 'Client creation initiated.',
       });
     }
+
+    router.refresh();
+    setOpen(false);
+    // form.reset(); // Don't reset on creation to allow for quick edits
   }
 
   return (

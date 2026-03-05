@@ -15,6 +15,7 @@ export type Company = {
 
 export type Client = {
   id: string;
+  companyId: string;
   name: string;
   vat_number?: string;
   tax_code?: string;
@@ -33,6 +34,7 @@ export type Invoice = {
   year: number;
   date: string; // YYYY-MM-DD
   client_id: string;
+  companyId: string;
   subtotal: number;
   vat_total: number;
   total: number;
@@ -45,6 +47,8 @@ export type Invoice = {
 
 export type InvoiceItem = {
   id: string;
+  invoiceId: string;
+  companyId: string;
   description: string;
   quantity: number;
   unit_price: number;

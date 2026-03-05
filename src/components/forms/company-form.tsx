@@ -16,33 +16,58 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { updateCompanyProfile } from '@/lib/data';
 import { useRouter } from 'next/navigation';
+import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useEffect } from 'react';
 
-export function CompanyForm({ company }: { company: Company }) {
+export function CompanyForm({ company }: { company: Company | null }) {
   const { toast } = useToast();
   const router = useRouter();
+  const firestore = useFirestore();
+  const { user } = useUser();
 
-  const form = useForm<Company>({
+  const form = useForm<Omit<Company, 'id'>>({
     resolver: zodResolver(CompanySchema),
-    defaultValues: company,
+    defaultValues: company || {
+      company_name: '',
+      vat_number: '',
+      tax_code: '',
+      address: '',
+      city: '',
+      province: '',
+      zip: '',
+      country: 'IT',
+      pec_email: '',
+      iban: '',
+      regime_fiscale: '',
+    },
   });
 
-  async function onSubmit(data: Company) {
-    try {
-      await updateCompanyProfile(data);
-      toast({
-        title: 'Success',
-        description: 'Company profile updated successfully.',
-      });
-      router.refresh();
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to update company profile.',
-      });
+  useEffect(() => {
+    if (company) {
+      form.reset(company);
     }
+  }, [company, form]);
+
+  async function onSubmit(data: Omit<Company, 'id'>) {
+    if (!firestore || !user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Firestore not available or user not logged in.' });
+        return;
+    }
+    
+    const companyRef = doc(firestore, 'company', 'main-company');
+    
+    // The security rules need the 'companyId' field for authorization.
+    const dataToSave = { ...data, id: 'main-company' };
+
+    setDocumentNonBlocking(companyRef, dataToSave, { merge: true });
+    
+    toast({
+      title: 'Success',
+      description: 'Company profile update initiated.',
+    });
+    router.refresh();
   }
 
   return (
