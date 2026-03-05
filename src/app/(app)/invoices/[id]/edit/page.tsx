@@ -7,23 +7,26 @@ import { doc, collection, query, where } from "firebase/firestore";
 import type { Invoice, InvoiceItem, InvoiceWithItems } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo } from "react";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 
-export default function EditInvoicePage({ params }: { params: { id: string } }) {
+export default function EditInvoicePage() {
+  const params = useParams<{ id: string }>();
   const firestore = useFirestore();
+
+  const id = params.id;
 
   // Fetch invoice
   const invoiceRef = useMemoFirebase(() => {
-    if (!firestore || !params.id) return null;
-    return doc(firestore, 'invoices', params.id);
-  }, [firestore, params.id]);
+    if (!firestore || !id) return null;
+    return doc(firestore, 'invoices', id);
+  }, [firestore, id]);
   const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceRef);
 
   // Fetch invoice items
   const itemsQuery = useMemoFirebase(() => {
-    if (!firestore || !params.id) return null;
-    return query(collection(firestore, 'invoiceItems'), where('invoiceId', '==', params.id));
-  }, [firestore, params.id]);
+    if (!firestore || !id) return null;
+    return query(collection(firestore, 'invoiceItems'), where('invoiceId', '==', id));
+  }, [firestore, id]);
   const { data: items, isLoading: isLoadingItems } = useCollection<InvoiceItem>(itemsQuery);
 
   const invoiceWithItems = useMemo<InvoiceWithItems | null>(() => {
