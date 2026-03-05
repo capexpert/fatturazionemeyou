@@ -18,9 +18,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Download, Edit, Copy, Trash2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { collection, query, orderBy, doc } from "firebase/firestore";
-import type { Client, Invoice } from "@/lib/types";
+import type { Client, Company, Invoice } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { format } from 'date-fns';
 import { useMemo, useState } from "react";
@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { PdfDownloader } from "./PdfDownloader";
 
 
 const statusVariant = {
@@ -78,16 +79,22 @@ export function InvoicesTable() {
     }, [firestore]);
     const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
     
+    const companyRef = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return doc(firestore, 'company', 'main-company');
+    }, [firestore]);
+    const { data: company, isLoading: isLoadingCompany } = useDoc<Company>(companyRef);
+
     const invoicesWithClients = useMemo(() => {
       if (!invoices || !clients) return [];
-      const clientMap = new Map(clients.map(c => [c.id, c.name]));
+      const clientMap = new Map(clients.map(c => [c.id, c]));
       return invoices.map(inv => ({
         ...inv,
-        client: { name: clientMap.get(inv.client_id) || 'Cliente non trovato' }
+        client: clientMap.get(inv.client_id) || null
       }));
     }, [invoices, clients]);
 
-    const isLoading = isLoadingInvoices || isLoadingClients;
+    const isLoading = isLoadingInvoices || isLoadingClients || isLoadingCompany;
 
     function handleDeleteInvoice() {
         if (!invoiceToDelete || !firestore) return;
@@ -167,10 +174,7 @@ export function InvoicesTable() {
                                 <Download className="mr-2 h-4 w-4" />
                                 Scarica XML
                             </DropdownMenuItem>
-                            <DropdownMenuItem disabled>
-                                <Download className="mr-2 h-4 w-4" />
-                                Scarica PDF
-                            </DropdownMenuItem>
+                            <PdfDownloader invoice={invoice} company={company} client={invoice.client} />
                             <DropdownMenuItem asChild>
                                 <Link href={`/invoices/${invoice.id}/edit`}>
                                     <Edit className="mr-2 h-4 w-4" />

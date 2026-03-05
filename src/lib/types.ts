@@ -51,5 +51,5 @@ export type Invoice = {
   xml_content?: string;
   created_at: string; // ISO 8601
   items: InvoiceItem[];
-  client?: Client; // Populated for display
+  client?: Client | null; // Populated for display
 };
