@@ -40,6 +40,7 @@ const ClientSchema = z.object({
 export type Client = z.infer<typeof ClientSchema>;
 
 const InvoiceItemSchema = z.object({
+  title: z.string().describe('Title of the invoice item.'),
   description: z.string().describe('Description of the invoice item.'),
   quantity: z.number().describe('Quantity of the item.'),
   unit_price: z.number().describe('Unit price of the item.'),
@@ -97,20 +98,21 @@ Invoice Items:
 {{{json invoice_items}}}
 
 Guidelines:
-1. The root element must be <FatturaElettronica xmlns="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="1.2">
-2. FormatoTrasmissione must be FPR12.
-3. CodiceDestinatario should be "{{client.sdi_code}}" if provided, otherwise '0000000' for PEC. If '0000000', also include PECDestinatario with "{{client.pec}}".
-4. TipoDocumento must be TD01.
-5. Divisa must be '{{invoice.currency}}'.
-6. For each DettaglioLinee, provide a sequential NumeroLinea starting from 1.
-7. For DatiRiepilogo, aggregate the invoice_items by their 'vat_rate'. For each unique 'vat_rate':
+1.  The root element must be <p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">.
+2.  FormatoTrasmissione must be 'FPR12'.
+3.  CodiceDestinatario should be "{{client.sdi_code}}" if provided and not '0000000'. If it is '0000000', then use that value and also include the <PECDestinatario>{{client.pec}}</PECDestinatario> tag.
+4.  TipoDocumento must be 'TD01'.
+5.  Divisa must be '{{invoice.currency}}'.
+6.  For each item in DettaglioLinee, create the <Descrizione> tag by combining the 'title' and 'description' fields in the format: "title - description".
+7.  For each DettaglioLinee, provide a sequential NumeroLinea starting from 1.
+8.  For DatiRiepilogo, aggregate the invoice_items by their 'vat_rate'. For each unique 'vat_rate':
     - Calculate 'ImponibileImporto' (Taxable amount) as the sum of 'line_total' for items with this VAT rate.
     - Calculate 'Imposta' (VAT amount) as the sum of ('line_total' * 'vat_rate' / 100) for items with this VAT rate.
     - Ensure both 'ImponibileImporto' and 'Imposta' are correctly rounded to 2 decimal places.
-8. Assume ModalitaPagamento MP05 (Bonifico bancario) for DatiPagamento, and include the company's IBAN. The DataScadenzaPagamento can be the same as the invoice date.
-9. Ensure all numeric values are formatted correctly as decimals (e.g., 12.34).
-10. If a client has neither vat_number nor tax_code, omit the corresponding XML fields in CessionarioCommittente/DatiAnagrafici.
-11. Output only the XML document. No additional text, comments, or explanations.
+9.  Assume ModalitaPagamento 'MP05' (Bonifico) for DatiPagamento, and include the company's IBAN. The DataScadenzaPagamento can be the same as the invoice date.
+10. Ensure all numeric values are formatted correctly as decimals with a period separator (e.g., 12.34).
+11. If a client has neither vat_number nor tax_code, omit the corresponding XML fields in CessionarioCommittente/DatiAnagrafici.
+12. Output only the XML document. No additional text, comments, or explanations.
 
 Please generate the FatturaPA XML document now:`,
 });

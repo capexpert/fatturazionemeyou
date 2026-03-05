@@ -69,7 +69,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
           client_id: '',
           date: new Date(),
           items: [
-            { id: '1', description: '', quantity: 1, unit_price: 0, vat_rate: 22 },
+            { id: '1', title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 },
           ],
         },
   });
@@ -226,7 +226,8 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-1/2">Description</TableHead>
+                      <TableHead className="w-[30%]">Title</TableHead>
+                      <TableHead className="w-[40%]">Description</TableHead>
                       <TableHead>Qty</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>VAT</TableHead>
@@ -240,8 +241,15 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                         <TableCell>
                           <FormField
                             control={form.control}
+                            name={`items.${index}.title`}
+                            render={({ field }) => <Input {...field} placeholder="e.g. Website development"/>}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
                             name={`items.${index}.description`}
-                            render={({ field }) => <Input {...field} />}
+                            render={({ field }) => <Input {...field} placeholder="Detailed description"/>}
                           />
                         </TableCell>
                         <TableCell>
@@ -287,7 +295,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                     variant="outline"
                     size="sm"
                     className="mt-4"
-                    onClick={() => append({ id: `${fields.length+1}`, description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
+                    onClick={() => append({ id: `${fields.length+1}`, title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
                 >
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                 </Button>

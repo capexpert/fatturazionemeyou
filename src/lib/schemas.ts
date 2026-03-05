@@ -35,6 +35,7 @@ export const ClientSchema = z.object({
 
 export const InvoiceItemSchema = z.object({
   id: z.string(),
+  title: z.string().min(1, "Title is required."),
   description: z.string().min(1, "Description is required."),
   quantity: z.number().min(0.01, "Quantity must be greater than 0."),
   unit_price: z.number().min(0, "Unit price cannot be negative."),

@@ -51,7 +51,8 @@ export async function saveInvoiceAction(data: z.infer<typeof InvoiceSchema>) {
             total,
             currency: 'EUR',
         },
-        invoice_items: items.map((item: InvoiceItem & {vat_rate: number}) => ({
+        invoice_items: items.map((item) => ({
+            title: item.title,
             description: item.description,
             quantity: item.quantity,
             unit_price: item.unit_price,

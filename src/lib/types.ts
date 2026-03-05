@@ -49,6 +49,7 @@ export type InvoiceItem = {
   id: string;
   invoiceId: string;
   companyId: string;
+  title: string;
   description: string;
   quantity: number;
   unit_price: number;
