@@ -6,7 +6,7 @@ import { useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import type { Invoice } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { notFound, useParams } from "next/navigation";
+import { useParams, notFound } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -14,7 +14,8 @@ export default function EditInvoicePage() {
   const params = useParams<{ id: string }>();
   const firestore = useFirestore();
 
-  const id = params?.id;
+  // Ensure id is a string, as it can be string | string[]
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const invoiceRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -24,48 +25,51 @@ export default function EditInvoicePage() {
   const { data: invoice, isLoading, error } = useDoc<Invoice>(invoiceRef);
 
   if (isLoading || !id) {
-      return (
-          <>
-              <PageHeader title="Modifica Fattura" />
-               <div className="space-y-8">
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-[400px] w-full" />
-              </div>
-          </>
-      );
-  }
-  
-  if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Errore</AlertTitle>
-        <AlertDescription>
-          Impossibile caricare la fattura: {error.message}
-        </AlertDescription>
-      </Alert>
+      <>
+        <PageHeader title="Modifica Fattura" />
+        <div className="space-y-8">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-[400px] w-full" />
+        </div>
+      </>
     );
   }
 
-  // Only call notFound if loading is complete and the document is confirmed to not exist.
-  if (!isLoading && !invoice) {
-      notFound();
-  }
-  
-  // While loading is false, invoice could still be null for a brief moment before notFound is called.
-  // So we render a skeleton if invoice is not yet available.
-   if (!invoice) {
+  if (error) {
     return (
-         <>
-              <PageHeader title="Modifica Fattura" />
-               <div className="space-y-8">
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-[400px] w-full" />
-              </div>
-          </>
-    )
+      <>
+        <PageHeader title="Errore" />
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Errore di Caricamento</AlertTitle>
+          <AlertDescription>
+            Impossibile caricare la fattura a causa di un errore: {error.message}. 
+            Potrebbe trattarsi di un problema di permessi o di rete.
+          </AlertDescription>
+        </Alert>
+      </>
+    );
   }
 
+  // Only call notFound if loading is complete, there's no error, and the document is confirmed to not exist.
+  if (!isLoading && !error && !invoice) {
+    notFound();
+  }
+
+  // Render a skeleton if the invoice is not yet available, even if loading is false,
+  // to handle the brief moment before notFound is called.
+  if (!invoice) {
+    return (
+      <>
+        <PageHeader title="Modifica Fattura" />
+        <div className="space-y-8">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-[400px] w-full" />
+        </div>
+      </>
+    )
+  }
 
   return (
     <>

@@ -48,7 +48,6 @@ export type Invoice = {
   vat_total: number;
   total: number;
   status: 'draft' | 'sent' | 'paid';
-  xml_url?: string;
   xml_content?: string;
   created_at: string; // ISO 8601
   items: InvoiceItem[];

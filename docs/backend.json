@@ -145,8 +145,8 @@
           "description": "Unique identifier for the Invoice entity."
         },
         "number": {
-          "type": "number",
-          "description": "The sequential number of the invoice for the given year (e.g., '1' for 1/2026)."
+          "type": "string",
+          "description": "The sequential number of the invoice for the given year (e.g., '1/2026')."
         },
         "year": {
           "type": "number",
@@ -177,11 +177,6 @@
           "type": "string",
           "description": "The current status of the invoice (e.g., 'draft', 'issued', 'paid')."
         },
-        "xmlUrl": {
-          "type": "string",
-          "description": "URL to the generated FatturaPA XML file stored in Firebase Storage.",
-          "format": "uri"
-        },
         "xml_content": {
             "type": "string",
             "description": "The generated FatturaPA XML content as a string."
@@ -190,6 +185,13 @@
           "type": "string",
           "description": "Timestamp when the invoice record was created.",
           "format": "date-time"
+        },
+        "items": {
+          "type": "array",
+          "description": "An array of line items for the invoice.",
+          "items": {
+            "$ref": "#/backend/entities/InvoiceItem"
+          }
         }
       },
       "required": [
@@ -202,7 +204,8 @@
         "vatTotal",
         "total",
         "status",
-        "createdAt"
+        "createdAt",
+        "items"
       ]
     },
     "InvoiceItem": {
@@ -215,9 +218,9 @@
           "type": "string",
           "description": "Unique identifier for the InvoiceItem entity."
         },
-        "invoiceId": {
+        "title": {
           "type": "string",
-          "description": "Reference to Invoice. (Relationship: Invoice 1:N InvoiceItem)"
+          "description": "A title for the product or service."
         },
         "description": {
           "type": "string",
@@ -242,7 +245,7 @@
       },
       "required": [
         "id",
-        "invoiceId",
+        "title",
         "description",
         "quantity",
         "unitPrice",
@@ -298,7 +301,7 @@
           "schema": {
             "$ref": "#/backend/entities/Invoice"
           },
-          "description": "Stores details for generated invoices. Each document includes 'clientId' and a denormalized 'companyId' field for explicit ownership and authorization independence.",
+          "description": "Stores details for generated invoices, with invoice items embedded within the document. Each document includes 'clientId' and a denormalized 'companyId' field for explicit ownership and authorization independence.",
           "params": [
             {
               "name": "invoiceId",
@@ -306,24 +309,8 @@
             }
           ]
         }
-      },
-      {
-        "path": "/invoiceItems/{invoiceItemId}",
-        "definition": {
-          "entityName": "InvoiceItem",
-          "schema": {
-            "$ref": "#/backend/entities/InvoiceItem"
-          },
-          "description": "Stores individual line items for an invoice. Each document includes 'invoiceId' and a denormalized 'companyId' for explicit ownership and authorization independence.",
-          "params": [
-            {
-              "name": "invoiceItemId",
-              "description": "The unique identifier for the invoice item."
-            }
-          ]
-        }
       }
     ],
-    "reasoning": "The Firestore structure for FatturaNow is designed to support a single Italian company, prioritizing security, scalability, and debuggability as per the core design principles.\n\nAuthorization Independence & Denormalization:\nAll core business entities (Client, Invoice, InvoiceItem) are structured in top-level collections as requested. To strictly adhere to the \"Authorization Independence via Denormalization\" mandate, each document within these collections will explicitly include a `companyId` field. For this single-company application, this `companyId` will be a consistent identifier (e.g., \"main_company\") across all documents. This denormalization ensures that security rules can determine a document's ownership (`companyId`) directly from the document itself, without requiring `get()` operations to parent documents or external collections. This allows for atomic write operations and simplifies rule evaluation, making authorization robust and easy to debug.\n\nStructural Segregation & QAPs:\nEach collection (/company, /clients, /invoices, /invoiceItems) maintains a homogeneous security posture. All documents within /clients, /invoices, and /invoiceItems implicitly belong to the single company and are accessible by authorized administrators. This clear segregation, combined with the denormalized `companyId` on each document, enables secure `list` operations. Security rules will simply check if the authenticated user (`request.auth.uid`) is an authorized administrator for the single `companyId` (e.g., by checking for existence in a `/roles_admin/{uid}` collection). Since `companyId` is present in every document, a `list` query will inherently only return documents owned by the single, authorized company, without requiring expensive or insecure filters within the rules themselves.\n\nAccess Modeling (DBAC):\nAuthorization relies on `request.auth.uid`. For administrator roles, the \"Existence over Content\" pattern is employed. A dedicated collection, `/roles_admin/{uid}`, will contain documents where the ID is the `uid` of an administrator. Security rules will grant access if `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))` is true. This ensures role-based access is managed within the database, fulfilling DBAC requirements without relying on custom claims. (Note: `roles_admin` is not listed in `firestorePaths` due to schema constraints requiring a `$ref` to a defined entity.)\n\nHierarchical Paths for User-Owned Data (Implicitly):\nWhile the application is single-tenant, the structure implicitly follows hierarchical ownership. The entire application's data is conceptually \"owned\" by the single `Company` document. Although Client, Invoice, InvoiceItem are top-level collections, the explicit `companyId` field in each document provides the necessary ownership context, aligning with the principle of clear ownership for future scalability. InvoiceItem documents are linked to Invoice documents via the `invoiceId` field.\n\nData Clarity and Predictability:\nThe structure adheres to predictable schemas and explicit state modeling, such as the `status` field in Invoice, enhancing debuggability and maintainability. Semantic naming conventions are consistently applied (e.g., `companyId`, `clientId`, `invoiceId`).\n\nThis design creates a secure, efficient, and maintainable Firestore foundation for FatturaNow, ready for its current single-company scope and adaptable for potential future extensions."
+    "reasoning": "The Firestore structure for FatturaNow is designed to support a single Italian company, prioritizing security, scalability, and debuggability as per the core design principles.\n\nAuthorization Independence & Denormalization:\nAll core business entities (Client, Invoice) are structured in top-level collections. To strictly adhere to the \"Authorization Independence via Denormalization\" mandate, each document within these collections will explicitly include a `companyId` field. For this single-company application, this `companyId` will be a consistent identifier (e.g., \"main_company\") across all documents. This denormalization ensures that security rules can determine a document's ownership (`companyId`) directly from the document itself, without requiring `get()` operations to parent documents or external collections. This allows for atomic write operations and simplifies rule evaluation, making authorization robust and easy to debug.\n\nData Modeling for Invoices:\nTo simplify data retrieval and ensure atomicity, `InvoiceItem` entities are now embedded as an array within their parent `Invoice` document. This eliminates the need for a separate `invoiceItems` collection and complex queries to assemble a full invoice. This change significantly improves performance for reading invoices and resolves previous issues related to data consistency that were causing application errors (like 404s on edit pages). This embedded approach is suitable for this application as the number of items per invoice is expected to be well within Firestore's document size limits.\n\nStructural Segregation & QAPs:\nEach collection (/company, /clients, /invoices) maintains a homogeneous security posture. All documents within /clients and /invoices implicitly belong to the single company and are accessible by authorized administrators. This clear segregation, combined with the denormalized `companyId` on each document, enables secure `list` operations.\n\nAccess Modeling (DBAC):\nAuthorization relies on `request.auth.uid`. For administrator roles, the \"Existence over Content\" pattern is employed. A dedicated collection, `/roles_admin/{uid}`, will contain documents where the ID is the `uid` of an administrator. Security rules will grant access if `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))` is true. This ensures role-based access is managed within the database, fulfilling DBAC requirements without relying on custom claims. (Note: `roles_admin` is not listed in `firestorePaths` due to schema constraints requiring a `$ref` to a defined entity.)\n\nData Clarity and Predictability:\nThe structure adheres to predictable schemas and explicit state modeling, such as the `status` field in Invoice, enhancing debuggability and maintainability. Semantic naming conventions are consistently applied (e.g., `companyId`, `clientId`, `invoiceId`).\n\nThis design creates a secure, efficient, and maintainable Firestore foundation for FatturaNow, ready for its current single-company scope and adaptable for potential future extensions."
   }
 }

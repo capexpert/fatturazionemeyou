@@ -36,8 +36,8 @@ import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { ClientForm } from './client-form';
 import { Separator } from '../ui/separator';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, setDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
 import type { GenerateFatturaPAXMLInput } from '@/ai/flows/generate-fatturapa-xml-flow';
@@ -140,10 +140,9 @@ const handleSaveInvoice = async (data: InvoiceFormData) => {
     const invoiceId = invoice?.id || doc(collection(firestore, 'invoices')).id;
     const invoiceRef = doc(firestore, 'invoices', invoiceId);
     
-    // Ensure items have IDs
     const itemsWithIds = data.items.map(item => ({
         ...item,
-        id: item.id || doc(collection(firestore, 'dummy-items')).id, // Ensure new items get an ID
+        id: item.id || doc(collection(firestore, 'dummy-items')).id, 
     }));
 
     const invoiceData: Omit<Invoice, 'client'> = {
@@ -156,20 +155,22 @@ const handleSaveInvoice = async (data: InvoiceFormData) => {
         subtotal,
         vat_total: vatTotal,
         total: grandTotal,
-        status: 'draft', // Always save as draft first
+        status: 'draft',
         created_at: invoice?.created_at || new Date().toISOString(),
         items: itemsWithIds,
         xml_content: invoice?.xml_content || '',
     };
 
     try {
-        await setDoc(invoiceRef, invoiceData, { merge: true });
-        toast({ title: 'Successo!', description: 'Bozza fattura salvata. Generazione XML in corso...' });
-        
-        // Asynchronously generate XML and update the document, without blocking the UI
-        generateAndAttachXML(invoiceData);
+        // First, save the draft invoice. This makes the edit page work immediately.
+        setDocumentNonBlocking(invoiceRef, invoiceData, { merge: true });
+        toast({ title: 'Successo!', description: 'Bozza fattura salvata. Generazione documenti in corso...' });
 
+        // Redirect immediately so the user isn't blocked
         router.push('/invoices');
+
+        // Then, generate XML in the background.
+        generateAndAttachXML(invoiceData);
 
     } catch (error) {
         console.error("Error during initial save:", error);
@@ -184,6 +185,7 @@ const handleSaveInvoice = async (data: InvoiceFormData) => {
 const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
     if (!firestore || !clients || !company) {
         console.warn("Cannot generate XML: services or data not ready.");
+        toast({ variant: 'destructive', title: 'Errore Prerequisiti XML', description: "Servizi o dati non pronti per la generazione XML." });
         return;
     }
 
@@ -212,16 +214,21 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
         dati_riepilogo: Object.values(datiRiepilogo),
     };
 
-    const xmlResult = await generateInvoiceXMLAction(xmlInput);
-    
-    if (xmlResult.xml) {
-        const invoiceRef = doc(firestore, 'invoices', savedInvoice.id);
-        // Fire-and-forget update to add the XML content.
-        await setDoc(invoiceRef, { xml_content: xmlResult.xml, status: 'draft' }, { merge: true });
-        toast({ title: 'Successo!', description: 'File XML generato e allegato alla fattura.' });
-        router.refresh(); // Refresh data on the invoices page
-    } else {
-        toast({ variant: 'destructive', title: 'Errore XML', description: xmlResult.message || 'La generazione del file XML è fallita.' });
+    try {
+        const xmlResult = await generateInvoiceXMLAction(xmlInput);
+        
+        if (xmlResult.xml) {
+            const invoiceRef = doc(firestore, 'invoices', savedInvoice.id);
+            // Fire-and-forget update to add the XML content.
+            setDocumentNonBlocking(invoiceRef, { xml_content: xmlResult.xml }, { merge: true });
+            toast({ title: 'Successo!', description: 'File XML generato e allegato alla fattura.' });
+            router.refresh();
+        } else {
+            throw new Error(xmlResult.message || 'La generazione del file XML è fallita.');
+        }
+    } catch(err) {
+        const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
+        toast({ variant: 'destructive', title: 'Errore Generazione XML', description: errorMessage });
     }
 };
 

@@ -18,8 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Download, Edit, Copy, Trash2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, limit, doc, deleteDoc } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from "@/firebase";
+import { collection, query, orderBy, limit, doc } from "firebase/firestore";
 import type { Client, Invoice } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { format } from 'date-fns';
@@ -89,17 +89,11 @@ export function RecentInvoicesTable() {
     
     const isLoading = isLoadingInvoices || isLoadingClients;
 
-    async function handleDeleteInvoice() {
+    function handleDeleteInvoice() {
         if (!invoiceToDelete || !firestore) return;
-        try {
-            const invoiceRef = doc(firestore, 'invoices', invoiceToDelete.id);
-            await deleteDoc(invoiceRef);
-    
-            toast({ title: "Successo!", description: "Fattura eliminata." });
-        } catch (error) {
-            console.error("Error deleting invoice: ", error);
-            toast({ variant: 'destructive', title: 'Errore', description: 'Impossibile eliminare la fattura.' });
-        }
+        const invoiceRef = doc(firestore, 'invoices', invoiceToDelete.id);
+        deleteDocumentNonBlocking(invoiceRef);
+        toast({ title: "Successo!", description: "Eliminazione fattura avviata." });
         setDialogOpen(false);
         setInvoiceToDelete(null);
     }
