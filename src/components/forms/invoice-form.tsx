@@ -19,14 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from '@/components/ui/table';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
@@ -129,259 +121,250 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
        <input type="hidden" name="items" value={JSON.stringify(watchedItems)} />
        {invoice?.id && <input type="hidden" name="id" value={invoice.id} />}
 
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-          <Card className="flex-1">
-            <CardHeader>
-              <CardTitle>Invoice Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="client_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} value={field.value}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="client_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a client" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <div onPointerDown={e => e.preventDefault()} >
+                          <ClientForm 
+                            companyId="main-company"
+                            onClientCreated={(newClient) => {
+                                form.setValue('client_id', newClient.id, { shouldValidate: true });
+                            }}
+                            trigger={
+                                <div className="flex w-full cursor-pointer items-center gap-2 p-2 text-sm hover:bg-accent rounded-sm">
+                                    <PlusCircle className="h-4 w-4" />
+                                    Aggiungi nuovo cliente
+                                </div>
+                            }
+                          />
+                        </div>
+                        <Separator className="my-1" />
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Invoice Date</FormLabel>
+                     <input type="hidden" name={field.name} value={field.value.toISOString()} />
+                    <Popover>
+                      <PopoverTrigger asChild>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a client" />
-                          </SelectTrigger>
+                          <Button
+                            variant={'outline'}
+                            className={cn(
+                              'pl-3 text-left font-normal',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, 'PPP')
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
                         </FormControl>
-                        <SelectContent>
-                          <div onPointerDown={e => e.preventDefault()} >
-                            <ClientForm 
-                              companyId="main-company"
-                              onClientCreated={(newClient) => {
-                                  form.setValue('client_id', newClient.id, { shouldValidate: true });
-                              }}
-                              trigger={
-                                  <div className="flex w-full cursor-pointer items-center gap-2 p-2 text-sm hover:bg-accent rounded-sm">
-                                      <PlusCircle className="h-4 w-4" />
-                                      Aggiungi nuovo cliente
-                                  </div>
-                              }
-                            />
-                          </div>
-                          <Separator className="my-1" />
-                          {clients.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              {client.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Invoice Date</FormLabel>
-                       <input type="hidden" name={field.name} value={field.value.toISOString()} />
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={'outline'}
-                              className={cn(
-                                'pl-3 text-left font-normal',
-                                !field.value && 'text-muted-foreground'
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, 'PPP')
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="space-y-2">
+                  <FormLabel>Invoice Number</FormLabel>
+                  <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <h3 className="font-medium">Items</h3>
+              <div className="space-y-4">
+                {fields.map((field, index) => {
+                  const netTotal = (watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unit_price || 0);
+                  const grossTotal = netTotal * (1 + (watchedItems[index]?.vat_rate || 0) / 100);
+                  return (
+                    <div key={field.id} className="rounded-lg border bg-card p-4 relative space-y-4">
+                        {fields.length > 1 && (
+                            <Button variant="ghost" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-8 w-8">
+                                <Trash2 className="h-4 w-4" />
                             </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="space-y-2">
-                    <FormLabel>Invoice Number</FormLabel>
-                    <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
-                </div>
+                        )}
+                        
+                        <FormField
+                            control={form.control}
+                            name={`items.${index}.title`}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Title</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g. Website development" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={`items.${index}.description`}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Description</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Detailed description of the service provided" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.quantity`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Qty</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.unit_price`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Price</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.vat_rate`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>VAT</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {[22, 10, 5, 4].map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormItem>
+                                <FormLabel>Net Total</FormLabel>
+                                <FormControl>
+                                    <Input disabled value={formatCurrency(netTotal)} />
+                                </FormControl>
+                            </FormItem>
+                            <FormItem>
+                                <FormLabel>Gross Total</FormLabel>
+                                <FormControl>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="0.00"
+                                      value={grossTotal > 0 ? grossTotal.toFixed(2) : ''}
+                                      onChange={(e) => {
+                                          const grossTotalValue = parseFloat(e.target.value);
+                                          const item = form.getValues(`items.${index}`);
+                                          const quantity = item.quantity || 1;
+                                          const vatRate = item.vat_rate || 0;
+
+                                          if (!isNaN(grossTotalValue) && quantity > 0) {
+                                              const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
+                                              const currentUnitPrice = item.unit_price || 0;
+                                              if (Math.abs(currentUnitPrice - newUnitPrice) > 0.0001) {
+                                                form.setValue(`items.${index}.unit_price`, newUnitPrice, { shouldValidate: true, shouldDirty: true });
+                                              }
+                                          }
+                                      }}
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        </div>
+                    </div>
+                  )
+                })}
               </div>
-
-              <div className="mt-6 space-y-4">
-                <h3 className="font-medium">Items</h3>
-                <div className="space-y-4">
-                  {fields.map((field, index) => {
-                    const netTotal = (watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unit_price || 0);
-                    const grossTotal = netTotal * (1 + (watchedItems[index]?.vat_rate || 0) / 100);
-                    return (
-                      <div key={field.id} className="rounded-lg border bg-card p-4 relative space-y-4">
-                          {fields.length > 1 && (
-                              <Button variant="ghost" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-8 w-8">
-                                  <Trash2 className="h-4 w-4" />
-                              </Button>
-                          )}
-                          
-                          <FormField
-                              control={form.control}
-                              name={`items.${index}.title`}
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Title</FormLabel>
-                                      <FormControl>
-                                          <Input placeholder="e.g. Website development" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                          <FormField
-                              control={form.control}
-                              name={`items.${index}.description`}
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Description</FormLabel>
-                                      <FormControl>
-                                          <Input placeholder="Detailed description of the service provided" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                              <FormField
-                                  control={form.control}
-                                  name={`items.${index}.quantity`}
-                                  render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Qty</FormLabel>
-                                          <FormControl>
-                                              <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
-                                          </FormControl>
-                                          <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                              <FormField
-                                  control={form.control}
-                                  name={`items.${index}.unit_price`}
-                                  render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Price</FormLabel>
-                                          <FormControl>
-                                              <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
-                                          </FormControl>
-                                          <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                              <FormField
-                                  control={form.control}
-                                  name={`items.${index}.vat_rate`}
-                                  render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>VAT</FormLabel>
-                                          <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                                              <FormControl>
-                                                  <SelectTrigger><SelectValue /></SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                  {[22, 10, 5, 4].map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}
-                                              </SelectContent>
-                                          </Select>
-                                          <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                              <FormItem>
-                                  <FormLabel>Net Total</FormLabel>
-                                  <FormControl>
-                                      <Input disabled value={formatCurrency(netTotal)} />
-                                  </FormControl>
-                              </FormItem>
-                              <FormItem>
-                                  <FormLabel>Gross Total</FormLabel>
-                                  <FormControl>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        value={grossTotal > 0 ? grossTotal.toFixed(2) : ''}
-                                        onChange={(e) => {
-                                            const grossTotalValue = parseFloat(e.target.value);
-                                            const item = form.getValues(`items.${index}`);
-                                            const quantity = item.quantity || 1;
-                                            const vatRate = item.vat_rate || 0;
-
-                                            if (!isNaN(grossTotalValue) && quantity > 0) {
-                                                const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
-                                                const currentUnitPrice = item.unit_price || 0;
-                                                if (Math.abs(currentUnitPrice - newUnitPrice) > 0.0001) {
-                                                  form.setValue(`items.${index}.unit_price`, newUnitPrice, { shouldValidate: true, shouldDirty: true });
-                                                }
-                                            }
-                                        }}
-                                      />
-                                  </FormControl>
-                              </FormItem>
-                          </div>
-                      </div>
-                    )
-                  })}
+              <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => append({ id: `${fields.length+1}`, title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
+              >
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+              </Button>
+            </div>
+          </CardContent>
+          <CardFooter className="flex-col items-stretch gap-y-4 p-6">
+            <Separator />
+            <div className="space-y-2">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">{formatCurrency(subtotal)}</span>
                 </div>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => append({ id: `${fields.length+1}`, title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
-                >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <aside className="top-8 w-full space-y-4 lg:sticky lg:w-80">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex justify-between">
-                        <span>Subtotal</span>
-                        <span className="font-medium">{formatCurrency(subtotal)}</span>
-                    </div>
-                     <div className="flex justify-between">
-                        <span>VAT</span>
-                        <span className="font-medium">{formatCurrency(vatTotal)}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-4 text-lg font-bold">
-                        <span>Total</span>
-                        <span>{formatCurrency(grandTotal)}</span>
-                    </div>
-                </CardContent>
-                <CardFooter>
-                     <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? 'Saving...' : (invoice ? 'Update Invoice' : 'Save Invoice')}
-                    </Button>
-                </CardFooter>
-            </Card>
-          </aside>
-        </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">VAT</span>
+                    <span className="font-medium">{formatCurrency(vatTotal)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2 mt-2 text-lg font-bold">
+                    <span>Total</span>
+                    <span>{formatCurrency(grandTotal)}</span>
+                </div>
+            </div>
+            <Button type="submit" className="w-full mt-4" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Saving...' : (invoice ? 'Update Invoice' : 'Save Invoice')}
+            </Button>
+          </CardFooter>
+        </Card>
       </form>
     </Form>
   );
