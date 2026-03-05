@@ -178,8 +178,8 @@ export function RecentInvoicesTable() {
                                 Scarica XML
                             </DropdownMenuItem>
                             <DropdownMenuItem disabled>
-                               <Download className="mr-2 h-4 w-4" />
-                               Scarica PDF
+                                <Download className="mr-2 h-4 w-4" />
+                                Scarica PDF
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                                 <Link href={`/invoices/${invoice.id}/edit`}>
