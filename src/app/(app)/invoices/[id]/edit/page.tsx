@@ -47,9 +47,25 @@ export default function EditInvoicePage() {
     );
   }
 
-  if (!invoice) {
+  // Only call notFound if loading is complete and the document is confirmed to not exist.
+  if (!isLoading && !invoice) {
       notFound();
   }
+  
+  // While loading is false, invoice could still be null for a brief moment before notFound is called.
+  // So we render a skeleton if invoice is not yet available.
+   if (!invoice) {
+    return (
+         <>
+              <PageHeader title="Modifica Fattura" />
+               <div className="space-y-8">
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-[400px] w-full" />
+              </div>
+          </>
+    )
+  }
+
 
   return (
     <>

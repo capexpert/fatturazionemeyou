@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
+
 const statusVariant = {
     paid: 'default',
     sent: 'secondary',
@@ -173,7 +174,7 @@ export function InvoicesTable() {
                                 Scarica XML
                             </DropdownMenuItem>
                             <DropdownMenuItem disabled>
-                                <Download className="mr-2 h-4 w-4" />
+                               <Download className="mr-2 h-4 w-4" />
                                 Scarica PDF
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>

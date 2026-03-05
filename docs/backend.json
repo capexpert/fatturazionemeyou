@@ -182,11 +182,6 @@
           "description": "URL to the generated FatturaPA XML file stored in Firebase Storage.",
           "format": "uri"
         },
-        "pdfUrl": {
-          "type": "string",
-          "description": "URL to the generated courtesy PDF file stored in Firebase Storage.",
-          "format": "uri"
-        },
         "xml_content": {
             "type": "string",
             "description": "The generated FatturaPA XML content as a string."
