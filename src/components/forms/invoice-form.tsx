@@ -36,15 +36,26 @@ import { format } from 'date-fns';
 import { useEffect } from 'react';
 import { ClientForm } from './client-form';
 import { Separator } from '../ui/separator';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { Skeleton } from '../ui/skeleton';
 
 type InvoiceFormProps = {
-  clients: Client[];
   invoice?: InvoiceWithItems;
   nextInvoiceNumber: string;
 };
 
-export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceFormProps) {
+export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const clientsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'clients'), where('companyId', '==', 'main-company'));
+  }, [firestore]);
+
+  const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
+
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(InvoiceSchema),
     defaultValues: invoice
@@ -88,10 +99,9 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
     { subtotal: 0, vatTotal: 0, grandTotal: 0 }
   );
   
-  // When switching client, if SDI code is 0000000, check if PEC is available
-   useEffect(() => {
+  useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      if (name === 'client_id') {
+      if (name === 'client_id' && clients) {
         const client = clients.find(c => c.id === value.client_id);
         if (client && client.sdi_code === '0000000' && !client.pec) {
            toast({
@@ -127,7 +137,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
               <CardTitle>Dettagli Fattura</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-end">
                 <FormField
                   control={form.control}
                   name="client_id"
@@ -156,11 +166,15 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                             />
                           </div>
                           <Separator className="my-1" />
-                          {clients.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              {client.name}
-                            </SelectItem>
-                          ))}
+                          {isLoadingClients ? (
+                            <SelectItem value="loading" disabled>Caricamento clienti...</SelectItem>
+                          ) : (
+                            clients && clients.map((client) => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {client.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -171,7 +185,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                   control={form.control}
                   name="date"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Data Fattura</FormLabel>
                       <input type="hidden" name={field.name} value={field.value.toISOString()} />
                       <Popover>
@@ -180,7 +194,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                             <Button
                               variant={'outline'}
                               className={cn(
-                                'pl-3 text-left font-normal',
+                                'w-full pl-3 text-left font-normal',
                                 !field.value && 'text-muted-foreground'
                               )}
                             >
@@ -207,10 +221,12 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                     </FormItem>
                   )}
                 />
-                <div className="space-y-2">
+                <FormItem>
                     <FormLabel>Numero Fattura</FormLabel>
-                    <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
-                </div>
+                    <FormControl>
+                        <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
+                    </FormControl>
+                </FormItem>
               </div>
             </CardContent>
           </Card>
