@@ -34,12 +34,14 @@ import { collection, doc } from 'firebase/firestore';
 type ClientFormProps = {
   client?: Client;
   companyId: string;
+  trigger?: React.ReactNode;
+  onClientCreated?: (newClient: Client & { id: string }) => void;
 };
 
 // We omit 'id' and 'companyId' from the form values, as they are handled separately.
 type ClientFormData = Omit<Client, 'id' | 'companyId'>;
 
-export function ClientForm({ client, companyId }: ClientFormProps) {
+export function ClientForm({ client, companyId, trigger, onClientCreated }: ClientFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -80,28 +82,34 @@ export function ClientForm({ client, companyId }: ClientFormProps) {
       });
     } else {
       const clientsCollection = collection(firestore, 'clients');
-      addDocumentNonBlocking(clientsCollection, dataToSave);
+      addDocumentNonBlocking(clientsCollection, dataToSave).then(docRef => {
+        if(docRef && onClientCreated) {
+            onClientCreated({ ...dataToSave, id: docRef.id });
+        }
+      });
        toast({
         title: 'Success',
         description: 'Client creation initiated.',
       });
+      form.reset();
     }
 
     router.refresh();
     setOpen(false);
-    // form.reset(); // Don't reset on creation to allow for quick edits
   }
+
+  const defaultTrigger = client ? (
+    <Button variant="ghost" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit</Button>
+  ) : (
+    <Button>
+      <PlusCircle className="mr-2 h-4 w-4" /> Add New Client
+    </Button>
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {client ? (
-          <Button variant="ghost" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit</Button>
-        ) : (
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Client
-          </Button>
-        )}
+        {trigger || defaultTrigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>

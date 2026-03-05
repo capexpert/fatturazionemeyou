@@ -42,6 +42,8 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEffect } from 'react';
+import { ClientForm } from './client-form';
+import { Separator } from '../ui/separator';
 
 type InvoiceFormProps = {
   clients: Client[];
@@ -140,13 +142,28 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Client</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a client" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <div onPointerDown={e => e.preventDefault()} >
+                            <ClientForm 
+                              companyId="main-company"
+                              onClientCreated={(newClient) => {
+                                  form.setValue('client_id', newClient.id, { shouldValidate: true });
+                              }}
+                              trigger={
+                                  <div className="flex w-full cursor-pointer items-center gap-2 p-2 text-sm hover:bg-accent rounded-sm">
+                                      <PlusCircle className="h-4 w-4" />
+                                      Aggiungi nuovo cliente
+                                  </div>
+                              }
+                            />
+                          </div>
+                          <Separator className="my-1" />
                           {clients.map((client) => (
                             <SelectItem key={client.id} value={client.id}>
                               {client.name}
