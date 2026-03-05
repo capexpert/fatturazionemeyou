@@ -13,7 +13,7 @@ export default function EditInvoicePage() {
   const params = useParams<{ id: string }>();
   const firestore = useFirestore();
 
-  const id = params.id;
+  const id = params?.id;
 
   // Fetch invoice
   const invoiceRef = useMemoFirebase(() => {
@@ -34,7 +34,7 @@ export default function EditInvoicePage() {
     return { ...invoice, items };
   }, [invoice, items]);
 
-  const isLoading = isLoadingInvoice || isLoadingItems;
+  const isLoading = !id || isLoadingInvoice || isLoadingItems;
 
   if (isLoading) {
       return (
