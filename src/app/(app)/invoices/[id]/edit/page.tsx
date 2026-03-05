@@ -7,6 +7,8 @@ import { doc } from "firebase/firestore";
 import type { Invoice } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { notFound, useParams } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function EditInvoicePage() {
   const params = useParams<{ id: string }>();
@@ -19,7 +21,7 @@ export default function EditInvoicePage() {
     return doc(firestore, 'invoices', id);
   }, [firestore, id]);
 
-  const { data: invoice, isLoading } = useDoc<Invoice>(invoiceRef);
+  const { data: invoice, isLoading, error } = useDoc<Invoice>(invoiceRef);
 
   if (isLoading || !id) {
       return (
@@ -33,6 +35,18 @@ export default function EditInvoicePage() {
       );
   }
   
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Errore</AlertTitle>
+        <AlertDescription>
+          Impossibile caricare la fattura: {error.message}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   if (!invoice) {
       notFound();
   }

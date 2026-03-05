@@ -128,138 +128,58 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   };
   
   const handleSaveInvoice = async (data: InvoiceFormData) => {
-    if (!firestore || !company || !clients) {
-      toast({ variant: 'destructive', title: 'Errore', description: 'I servizi non sono pronti. Riprova tra poco.' });
-      return;
-    }
-    
-    if (!company.company_name || !company.vat_number) {
-        toast({
-            variant: 'destructive',
-            title: 'Profilo Aziendale Incompleto',
-            description: 'Per favore, completa il tuo profilo aziendale nelle Impostazioni prima di generare una fattura.',
-        });
-        setIsSaving(false);
+    if (!firestore || !clients) {
+        toast({ variant: 'destructive', title: 'Errore', description: 'I servizi non sono pronti. Riprova tra poco.' });
         return;
     }
-
+    
     setIsSaving(true);
     
-    const client = clients.find(c => c.id === data.client_id);
-    if (!client) {
-      toast({ variant: 'destructive', title: 'Errore', description: 'Cliente non trovato.' });
-      setIsSaving(false);
-      return;
-    }
-
     try {
-      const invoiceId = invoice?.id || doc(collection(firestore, 'invoices')).id;
-      const invoiceRef = doc(firestore, 'invoices', invoiceId);
-      
-      const invoiceData: Omit<Invoice, 'client' | 'xml_url' | 'pdf_url' | 'xml_content'> = {
-        id: invoiceId,
-        number: invoice?.number || nextInvoiceNumber,
-        year: data.date.getFullYear(),
-        date: data.date.toISOString(),
-        client_id: data.client_id,
-        companyId: 'main-company',
-        subtotal,
-        vat_total: vatTotal,
-        total: grandTotal,
-        status: invoice?.status || 'draft',
-        created_at: invoice?.created_at || new Date().toISOString(),
-        items: data.items.map(item => ({
-            id: item.id || doc(collection(firestore, 'dummy-id-generator')).id,
-            title: item.title,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            vat_rate: item.vat_rate,
-        })),
-      };
-
-      await setDoc(invoiceRef, invoiceData, { merge: true });
-      
-      toast({ title: 'Successo!', description: 'Bozza della fattura salvata. Ora genero XML...' });
-
-      const datiRiepilogo = watchedItems.reduce((acc, item) => {
-          const vatRate = item.vat_rate;
-          const lineTotal = (item.quantity || 0) * (item.unit_price || 0);
-          if (!acc[vatRate]) {
-              acc[vatRate] = { imponibile: 0, imposta: 0, aliquota: vatRate };
-          }
-          acc[vatRate].imponibile += lineTotal;
-          acc[vatRate].imposta += lineTotal * (vatRate / 100);
-          return acc;
-      }, {} as Record<number, { imponibile: number, imposta: number, aliquota: number }>);
-
-      const xmlInput = {
-        company: {
-          company_name: company.company_name,
-          vat_number: company.vat_number,
-          tax_code: company.tax_code,
-          address: company.address,
-          city: company.city,
-          province: company.province,
-          zip: company.zip,
-          country: company.country,
-          pec_email: company.pec_email,
-          iban: company.iban,
-          regime_fiscale: company.regime_fiscale,
-        },
-        client: {
-            name: client.name,
-            vat_number: client.vat_number,
-            tax_code: client.tax_code,
-            address: client.address,
-            city: client.city,
-            province: client.province,
-            zip: client.zip,
-            country: client.country,
-            pec: client.pec,
-            sdi_code: client.sdi_code,
-        },
-        invoice: {
-            number: invoiceData.number,
-            date: format(data.date, 'yyyy-MM-dd'),
+        const invoiceId = invoice?.id || doc(collection(firestore, 'invoices')).id;
+        const invoiceRef = doc(firestore, 'invoices', invoiceId);
+        
+        const invoiceData: Omit<Invoice, 'client' | 'xml_url' | 'pdf_url' | 'xml_content'> = {
+            id: invoiceId,
+            number: invoice?.number || nextInvoiceNumber,
+            year: data.date.getFullYear(),
+            date: data.date.toISOString(),
+            client_id: data.client_id,
+            companyId: 'main-company',
             subtotal,
             vat_total: vatTotal,
             total: grandTotal,
-            currency: 'EUR',
-        },
-        invoice_items: invoiceData.items.map((item) => ({
-            title: item.title,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            vat_rate: item.vat_rate,
-            line_total: item.quantity * item.unit_price,
-        })),
-        dati_riepilogo: Object.values(datiRiepilogo),
-      };
+            status: 'draft', // Always save as draft first
+            created_at: invoice?.created_at || new Date().toISOString(),
+            items: data.items.map(item => ({
+                id: item.id || doc(collection(firestore, 'dummy-id-generator')).id,
+                title: item.title,
+                description: item.description,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                vat_rate: item.vat_rate,
+            })),
+        };
 
-      const xmlResult = await generateInvoiceXMLAction(xmlInput);
+        // Step 1: Save the core invoice data. This makes sure the invoice exists.
+        await setDoc(invoiceRef, invoiceData, { merge: true });
+        
+        toast({ title: 'Successo!', description: 'Fattura salvata come bozza.' });
 
-      if (xmlResult.xml) {
-        await updateDoc(invoiceRef, { xml_content: xmlResult.xml, status: 'sent' });
-        toast({ title: 'Successo!', description: 'File XML generato e salvato.' });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Errore Generazione XML',
-          description: xmlResult.message || 'Non è stato possibile generare il file XML. La fattura è salvata come bozza.',
-        });
-      }
-      
-      router.push('/invoices');
+        // Step 2: Redirect user immediately. XML generation will be handled separately.
+        router.push('/invoices');
+
+        // TODO: Re-introduce XML generation in a more robust way,
+        // for example, with a separate button on the invoices list page.
 
     } catch (error) {
-      console.error("Error saving invoice:", error);
-      toast({ variant: 'destructive', title: 'Errore nel salvataggio', description: (error as Error).message });
+        console.error("Error saving invoice:", error);
+        const errorMessage = error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto.';
+        toast({ variant: 'destructive', title: 'Errore nel salvataggio', description: errorMessage });
     } finally {
-      setIsSaving(false);
+        setIsSaving(false);
     }
-  }
+}
 
 
   if (isLoadingClients || isLoadingCompany) {
@@ -537,7 +457,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
             </CardContent>
             <CardFooter>
                 <Button type="submit" className="w-full" disabled={isSaving}>
-                    {isSaving ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva e Genera Documenti')}
+                    {isSaving ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva Bozza')}
                 </Button>
             </CardFooter>
         </Card>
