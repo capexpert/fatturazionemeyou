@@ -221,102 +221,127 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                 </div>
               </div>
 
-              <div className="mt-6">
-                <h3 className="mb-2 font-medium">Items</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[25%]">Title</TableHead>
-                      <TableHead className="w-[30%]">Description</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>VAT</TableHead>
-                      <TableHead className="text-right">Net Total</TableHead>
-                      <TableHead className="text-right">Gross Total</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fields.map((field, index) => {
-                      const netTotal = (watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unit_price || 0);
-                      const grossTotal = netTotal * (1 + (watchedItems[index]?.vat_rate || 0) / 100);
+              <div className="mt-6 space-y-4">
+                <h3 className="font-medium">Items</h3>
+                <div className="space-y-4">
+                  {fields.map((field, index) => {
+                    const netTotal = (watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unit_price || 0);
+                    const grossTotal = netTotal * (1 + (watchedItems[index]?.vat_rate || 0) / 100);
+                    return (
+                      <div key={field.id} className="rounded-lg border bg-card p-4 relative space-y-4">
+                          {fields.length > 1 && (
+                              <Button variant="ghost" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-8 w-8">
+                                  <Trash2 className="h-4 w-4" />
+                              </Button>
+                          )}
+                          
+                          <FormField
+                              control={form.control}
+                              name={`items.${index}.title`}
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Title</FormLabel>
+                                      <FormControl>
+                                          <Input placeholder="e.g. Website development" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name={`items.${index}.description`}
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Description</FormLabel>
+                                      <FormControl>
+                                          <Input placeholder="Detailed description of the service provided" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                              <FormField
+                                  control={form.control}
+                                  name={`items.${index}.quantity`}
+                                  render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Qty</FormLabel>
+                                          <FormControl>
+                                              <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                                          </FormControl>
+                                          <FormMessage />
+                                      </FormItem>
+                                  )}
+                              />
+                              <FormField
+                                  control={form.control}
+                                  name={`items.${index}.unit_price`}
+                                  render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>Price</FormLabel>
+                                          <FormControl>
+                                              <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                                          </FormControl>
+                                          <FormMessage />
+                                      </FormItem>
+                                  )}
+                              />
+                              <FormField
+                                  control={form.control}
+                                  name={`items.${index}.vat_rate`}
+                                  render={({ field }) => (
+                                      <FormItem>
+                                          <FormLabel>VAT</FormLabel>
+                                          <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                                              <FormControl>
+                                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                  {[22, 10, 5, 4].map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}
+                                              </SelectContent>
+                                          </Select>
+                                          <FormMessage />
+                                      </FormItem>
+                                  )}
+                              />
+                              <FormItem>
+                                  <FormLabel>Net Total</FormLabel>
+                                  <FormControl>
+                                      <Input disabled value={formatCurrency(netTotal)} />
+                                  </FormControl>
+                              </FormItem>
+                              <FormItem>
+                                  <FormLabel>Gross Total</FormLabel>
+                                  <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        value={grossTotal > 0 ? grossTotal.toFixed(2) : ''}
+                                        onChange={(e) => {
+                                            const grossTotalValue = parseFloat(e.target.value);
+                                            const item = form.getValues(`items.${index}`);
+                                            const quantity = item.quantity || 1;
+                                            const vatRate = item.vat_rate || 0;
 
-                      return (
-                      <TableRow key={field.id}>
-                        <TableCell>
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.title`}
-                            render={({ field }) => <Input {...field} placeholder="e.g. Website development"/>}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.description`}
-                            render={({ field }) => <Input {...field} placeholder="Detailed description"/>}
-                          />
-                        </TableCell>
-                        <TableCell>
-                           <FormField
-                            control={form.control}
-                            name={`items.${index}.quantity`}
-                            render={({ field }) => <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />}
-                          />
-                        </TableCell>
-                         <TableCell>
-                           <FormField
-                            control={form.control}
-                            name={`items.${index}.unit_price`}
-                            render={({ field }) => <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.vat_rate`}
-                            render={({ field }) => (
-                               <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {[22, 10, 5, 4].map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}
-                                </SelectContent>
-                               </Select>
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                            {formatCurrency(netTotal)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Input
-                              type="number"
-                              step="0.01"
-                              placeholder="0.00"
-                              value={grossTotal > 0 ? grossTotal.toFixed(2) : ''}
-                              onChange={(e) => {
-                                  const grossTotalValue = parseFloat(e.target.value);
-                                  const item = form.getValues(`items.${index}`);
-                                  const quantity = item.quantity || 1;
-                                  const vatRate = item.vat_rate || 0;
-
-                                  if (!isNaN(grossTotalValue) && quantity > 0) {
-                                      const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
-                                      const currentUnitPrice = item.unit_price || 0;
-                                      if (Math.abs(currentUnitPrice - newUnitPrice) > 0.0001) {
-                                        form.setValue(`items.${index}.unit_price`, newUnitPrice, { shouldValidate: true, shouldDirty: true });
-                                      }
-                                  }
-                              }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {fields.length > 1 && <Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button>}
-                        </TableCell>
-                      </TableRow>
-                    )})}
-                  </TableBody>
-                </Table>
+                                            if (!isNaN(grossTotalValue) && quantity > 0) {
+                                                const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
+                                                const currentUnitPrice = item.unit_price || 0;
+                                                if (Math.abs(currentUnitPrice - newUnitPrice) > 0.0001) {
+                                                  form.setValue(`items.${index}.unit_price`, newUnitPrice, { shouldValidate: true, shouldDirty: true });
+                                                }
+                                            }
+                                        }}
+                                      />
+                                  </FormControl>
+                              </FormItem>
+                          </div>
+                      </div>
+                    )
+                  })}
+                </div>
                 <Button
                     type="button"
                     variant="outline"
