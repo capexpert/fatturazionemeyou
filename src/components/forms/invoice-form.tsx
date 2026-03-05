@@ -96,8 +96,8 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
         if (client && client.sdi_code === '0000000' && !client.pec) {
            toast({
             variant: 'destructive',
-            title: 'Client Warning',
-            description: `Client "${client.name}" has SDI code '0000000' but no PEC address. The electronic invoice may be rejected.`,
+            title: 'Attenzione Cliente',
+            description: `Il cliente "${client.name}" ha codice SDI '0000000' ma nessun indirizzo PEC. La fattura elettronica potrebbe essere rifiutata.`,
           });
         }
       }
@@ -121,99 +121,105 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
        <input type="hidden" name="items" value={JSON.stringify(watchedItems)} />
        {invoice?.id && <input type="hidden" name="id" value={invoice.id} />}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="client_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a client" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <div onPointerDown={e => e.preventDefault()} >
-                          <ClientForm 
-                            companyId="main-company"
-                            onClientCreated={(newClient) => {
-                                form.setValue('client_id', newClient.id, { shouldValidate: true });
-                            }}
-                            trigger={
-                                <div className="flex w-full cursor-pointer items-center gap-2 p-2 text-sm hover:bg-accent rounded-sm">
-                                    <PlusCircle className="h-4 w-4" />
-                                    Aggiungi nuovo cliente
-                                </div>
-                            }
-                          />
-                        </div>
-                        <Separator className="my-1" />
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Invoice Date</FormLabel>
-                     <input type="hidden" name={field.name} value={field.value.toISOString()} />
-                    <Popover>
-                      <PopoverTrigger asChild>
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dettagli Fattura</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="client_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cliente</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} value={field.value}>
                         <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn(
-                              'pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un cliente" />
+                          </SelectTrigger>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="space-y-2">
-                  <FormLabel>Invoice Number</FormLabel>
-                  <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
+                        <SelectContent>
+                          <div onPointerDown={e => e.preventDefault()} >
+                            <ClientForm 
+                              companyId="main-company"
+                              onClientCreated={(newClient) => {
+                                  form.setValue('client_id', newClient.id, { shouldValidate: true });
+                              }}
+                              trigger={
+                                  <div className="flex w-full cursor-pointer items-center gap-2 p-2 text-sm hover:bg-accent rounded-sm">
+                                      <PlusCircle className="h-4 w-4" />
+                                      Aggiungi nuovo cliente
+                                  </div>
+                              }
+                            />
+                          </div>
+                          <Separator className="my-1" />
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Data Fattura</FormLabel>
+                      <input type="hidden" name={field.name} value={field.value.toISOString()} />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Scegli una data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="space-y-2">
+                    <FormLabel>Numero Fattura</FormLabel>
+                    <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="mt-6 space-y-4">
-              <h3 className="font-medium">Items</h3>
+          <Card>
+            <CardHeader>
+              <CardTitle>Articoli</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-4">
                 {fields.map((field, index) => {
                   const netTotal = (watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unit_price || 0);
@@ -225,15 +231,14 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                                 <Trash2 className="h-4 w-4" />
                             </Button>
                         )}
-                        
                         <FormField
                             control={form.control}
                             name={`items.${index}.title`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Title</FormLabel>
+                                    <FormLabel>Titolo</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g. Website development" {...field} />
+                                        <Input placeholder="Es. Sviluppo sito web" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -244,9 +249,9 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                             name={`items.${index}.description`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Description</FormLabel>
+                                    <FormLabel>Descrizione</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Detailed description of the service provided" {...field} />
+                                        <Input placeholder="Descrizione dettagliata del servizio fornito" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -258,7 +263,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                                 name={`items.${index}.quantity`}
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Qty</FormLabel>
+                                        <FormLabel>Qtà</FormLabel>
                                         <FormControl>
                                             <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                                         </FormControl>
@@ -271,7 +276,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                                 name={`items.${index}.unit_price`}
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Price</FormLabel>
+                                        <FormLabel>Prezzo</FormLabel>
                                         <FormControl>
                                             <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                                         </FormControl>
@@ -284,7 +289,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                                 name={`items.${index}.vat_rate`}
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>VAT</FormLabel>
+                                        <FormLabel>IVA</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
                                             <FormControl>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -298,13 +303,13 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                                 )}
                             />
                             <FormItem>
-                                <FormLabel>Net Total</FormLabel>
+                                <FormLabel>Totale Netto</FormLabel>
                                 <FormControl>
                                     <Input disabled value={formatCurrency(netTotal)} />
                                 </FormControl>
                             </FormItem>
                             <FormItem>
-                                <FormLabel>Gross Total</FormLabel>
+                                <FormLabel>Totale Lordo</FormLabel>
                                 <FormControl>
                                     <Input
                                       type="number"
@@ -340,31 +345,31 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                   className="mt-4"
                   onClick={() => append({ id: `${fields.length+1}`, title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
               >
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                  <PlusCircle className="mr-2 h-4 w-4" /> Aggiungi Articolo
               </Button>
-            </div>
-          </CardContent>
-          <CardFooter className="flex-col items-stretch gap-y-4 p-6">
-            <Separator />
-            <div className="space-y-2">
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">VAT</span>
-                    <span className="font-medium">{formatCurrency(vatTotal)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2 mt-2 text-lg font-bold">
-                    <span>Total</span>
-                    <span>{formatCurrency(grandTotal)}</span>
-                </div>
-            </div>
-            <Button type="submit" className="w-full mt-4" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : (invoice ? 'Update Invoice' : 'Save Invoice')}
-            </Button>
-          </CardFooter>
-        </Card>
+            </CardContent>
+          </Card>
+          
+          <div className="p-6 bg-card rounded-lg border">
+              <div className="space-y-2">
+                  <div className="flex justify-between">
+                      <span className="text-muted-foreground">Imponibile</span>
+                      <span className="font-medium">{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                      <span className="text-muted-foreground">IVA</span>
+                      <span className="font-medium">{formatCurrency(vatTotal)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2 mt-2 text-lg font-bold">
+                      <span>Totale</span>
+                      <span>{formatCurrency(grandTotal)}</span>
+                  </div>
+              </div>
+              <Button type="submit" className="w-full mt-4" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva Fattura')}
+              </Button>
+          </div>
+        </div>
       </form>
     </Form>
   );

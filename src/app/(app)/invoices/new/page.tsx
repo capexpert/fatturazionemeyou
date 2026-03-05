@@ -10,7 +10,7 @@ export default async function NewInvoicePage() {
 
   return (
     <>
-      <PageHeader title="Create Invoice" />
+      <PageHeader title="Crea Fattura" />
       <InvoiceForm clients={clients} nextInvoiceNumber={nextInvoiceNumber} />
     </>
   );

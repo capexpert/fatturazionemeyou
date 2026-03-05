@@ -20,7 +20,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
         <>
-            <PageHeader title="Settings" />
+            <PageHeader title="Impostazioni" />
             <div className="space-y-4">
                 <Skeleton className="h-[450px] w-full" />
                 <div className="flex justify-end">
@@ -33,7 +33,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" />
+      <PageHeader title="Impostazioni" />
       <CompanyForm company={company} />
     </>
   );

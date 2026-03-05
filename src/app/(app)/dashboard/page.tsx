@@ -14,7 +14,7 @@ export default function DashboardPage() {
         <Button asChild>
             <Link href="/invoices/new">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Create Invoice
+                Crea Fattura
             </Link>
         </Button>
       </PageHeader>

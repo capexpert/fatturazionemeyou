@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { generateFatturaPAXML } from '@/ai/flows/generate-fatturapa-xml-flow';
-import { getClientById, getCompanyProfile, getNextInvoiceNumber, saveInvoice as saveInvoiceData } from '@/lib/data';
+import { getClientById, getCompanyProfile, getNextInvoiceNumber, saveInvoice as saveInvoiceData, getInvoiceById } from '@/lib/data';
 import { InvoiceSchema } from '@/lib/schemas';
 import type { InvoiceItem } from '@/lib/types';
 import { format } from 'date-fns';
@@ -15,7 +15,7 @@ export async function saveInvoiceAction(data: z.infer<typeof InvoiceSchema>) {
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing Fields. Failed to Create Invoice.',
+      message: 'Campi mancanti. Impossibile creare la fattura.',
     };
   }
 
@@ -29,7 +29,7 @@ export async function saveInvoiceAction(data: z.infer<typeof InvoiceSchema>) {
     ]);
     
     if (!client) {
-        throw new Error("Client not found");
+        throw new Error("Cliente non trovato");
     }
 
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
@@ -69,7 +69,7 @@ export async function saveInvoiceAction(data: z.infer<typeof InvoiceSchema>) {
     
   } catch (error) {
     console.error(error);
-    return { message: 'Database Error: Failed to process Invoice.' };
+    return { message: 'Errore del database: impossibile elaborare la fattura.' };
   }
 
   revalidatePath('/invoices');

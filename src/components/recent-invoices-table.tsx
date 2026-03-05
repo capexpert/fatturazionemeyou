@@ -34,18 +34,18 @@ export async function RecentInvoicesTable() {
     return (
         <Card>
           <CardHeader>
-            <CardTitle>Recent Invoices</CardTitle>
+            <CardTitle>Fatture Recenti</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Number</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Numero</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Totale</TableHead>
+                  <TableHead>Stato</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -68,21 +68,21 @@ export async function RecentInvoicesTable() {
                         <DropdownMenuContent>
                           <DropdownMenuItem>
                             <Download className="mr-2 h-4 w-4" />
-                            Download XML
+                            Scarica XML
                           </DropdownMenuItem>
                            <DropdownMenuItem>
                             <Download className="mr-2 h-4 w-4" />
-                            Download PDF
+                            Scarica PDF
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                              <Link href={`/invoices/${invoice.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                Edit
+                                Modifica
                              </Link>
                           </DropdownMenuItem>
                            <DropdownMenuItem>
                             <Copy className="mr-2 h-4 w-4" />
-                            Duplicate
+                            Duplica
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

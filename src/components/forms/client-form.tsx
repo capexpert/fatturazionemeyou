@@ -77,8 +77,8 @@ export function ClientForm({ client, companyId, trigger, onClientCreated }: Clie
       const clientRef = doc(firestore, 'clients', client.id);
       setDocumentNonBlocking(clientRef, dataToSave, { merge: true });
        toast({
-        title: 'Success',
-        description: 'Client update initiated.',
+        title: 'Successo',
+        description: 'Aggiornamento cliente avviato.',
       });
     } else {
       const clientsCollection = collection(firestore, 'clients');
@@ -88,8 +88,8 @@ export function ClientForm({ client, companyId, trigger, onClientCreated }: Clie
         }
       });
        toast({
-        title: 'Success',
-        description: 'Client creation initiated.',
+        title: 'Successo',
+        description: 'Creazione cliente avviata.',
       });
       form.reset();
     }
@@ -99,10 +99,10 @@ export function ClientForm({ client, companyId, trigger, onClientCreated }: Clie
   }
 
   const defaultTrigger = client ? (
-    <Button variant="ghost" size="sm"><Edit className="mr-2 h-4 w-4" /> Edit</Button>
+    <Button variant="ghost" size="sm"><Edit className="mr-2 h-4 w-4" /> Modifica</Button>
   ) : (
     <Button>
-      <PlusCircle className="mr-2 h-4 w-4" /> Add New Client
+      <PlusCircle className="mr-2 h-4 w-4" /> Aggiungi Nuovo Cliente
     </Button>
   );
 
@@ -113,9 +113,9 @@ export function ClientForm({ client, companyId, trigger, onClientCreated }: Clie
       </DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
-          <DialogTitle>{client ? 'Edit Client' : 'Add New Client'}</DialogTitle>
+          <DialogTitle>{client ? 'Modifica Cliente' : 'Aggiungi Nuovo Cliente'}</DialogTitle>
           <DialogDescription>
-            Enter the details for the client.
+            Inserisci i dettagli del cliente.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -123,67 +123,67 @@ export function ClientForm({ client, companyId, trigger, onClientCreated }: Clie
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl><Input placeholder="Client S.p.A" {...field} /></FormControl>
+                  <FormLabel>Nome</FormLabel>
+                  <FormControl><Input placeholder="Cliente S.p.A" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="vat_number" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>VAT Number</FormLabel>
+                  <FormLabel>Partita IVA</FormLabel>
                   <FormControl><Input placeholder="12345678901" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="tax_code" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tax Code</FormLabel>
+                  <FormLabel>Codice Fiscale</FormLabel>
                   <FormControl><Input placeholder="RSSMRA80A01H501U" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="address" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Indirizzo</FormLabel>
                   <FormControl><Input placeholder="Via Nuova, 10" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="city" render={({ field }) => (
-                  <FormItem><FormLabel>City</FormLabel><FormControl><Input placeholder="Roma" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Città</FormLabel><FormControl><Input placeholder="Roma" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="province" render={({ field }) => (
-                  <FormItem><FormLabel>Province</FormLabel><FormControl><Input placeholder="RM" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Provincia</FormLabel><FormControl><Input placeholder="RM" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="zip" render={({ field }) => (
-                  <FormItem><FormLabel>ZIP</FormLabel><FormControl><Input placeholder="00100" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>CAP</FormLabel><FormControl><Input placeholder="00100" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="country" render={({ field }) => (
-                  <FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="IT" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Paese</FormLabel><FormControl><Input placeholder="IT" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
               <FormField control={form.control} name="pec" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>PEC Email</FormLabel>
+                  <FormLabel>Email PEC</FormLabel>
                   <FormControl><Input placeholder="client@pec.it" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="sdi_code" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>SDI Code</FormLabel>
+                  <FormLabel>Codice SDI</FormLabel>
                   <FormControl><Input placeholder="SUBM70N" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+              <DialogClose asChild><Button type="button" variant="outline">Annulla</Button></DialogClose>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : 'Save Client'}
+                {form.formState.isSubmitting ? 'Salvataggio...' : 'Salva Cliente'}
               </Button>
             </DialogFooter>
           </form>

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -64,8 +65,8 @@ export function CompanyForm({ company }: { company: Company | null }) {
     setDocumentNonBlocking(companyRef, dataToSave, { merge: true });
     
     toast({
-      title: 'Success',
-      description: 'Company profile update initiated.',
+      title: 'Successo',
+      description: 'Aggiornamento profilo aziendale avviato.',
     });
     router.refresh();
   }
@@ -75,7 +76,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle>Company Details</CardTitle>
+            <CardTitle>Dettagli Azienda</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <FormField
@@ -83,7 +84,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
               name="company_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Company Name</FormLabel>
+                  <FormLabel>Nome Azienda</FormLabel>
                   <FormControl>
                     <Input placeholder="Your Company SRL" {...field} />
                   </FormControl>
@@ -96,7 +97,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
               name="vat_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>VAT Number</FormLabel>
+                  <FormLabel>Partita IVA</FormLabel>
                   <FormControl>
                     <Input placeholder="12345678901" {...field} />
                   </FormControl>
@@ -109,7 +110,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
               name="tax_code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tax Code</FormLabel>
+                  <FormLabel>Codice Fiscale</FormLabel>
                   <FormControl>
                     <Input placeholder="12345678901" {...field} />
                   </FormControl>
@@ -122,7 +123,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Indirizzo</FormLabel>
                   <FormControl>
                     <Input placeholder="Via Roma, 1" {...field} />
                   </FormControl>
@@ -136,7 +137,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City</FormLabel>
+                    <FormLabel>Città</FormLabel>
                     <FormControl>
                       <Input placeholder="Milano" {...field} />
                     </FormControl>
@@ -149,7 +150,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
                 name="province"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Province</FormLabel>
+                    <FormLabel>Provincia</FormLabel>
                     <FormControl>
                       <Input placeholder="MI" {...field} />
                     </FormControl>
@@ -164,7 +165,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
                 name="zip"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>ZIP Code</FormLabel>
+                    <FormLabel>CAP</FormLabel>
                     <FormControl>
                         <Input placeholder="20121" {...field} />
                     </FormControl>
@@ -177,7 +178,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
                 name="country"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Country</FormLabel>
+                    <FormLabel>Paese</FormLabel>
                     <FormControl>
                         <Input placeholder="IT" {...field} />
                     </FormControl>
@@ -191,7 +192,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
                 name="pec_email"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>PEC Email</FormLabel>
+                    <FormLabel>Email PEC</FormLabel>
                     <FormControl>
                         <Input placeholder="your.company@pec.it" {...field} />
                     </FormControl>
@@ -217,10 +218,13 @@ export function CompanyForm({ company }: { company: Company | null }) {
                 name="regime_fiscale"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Fiscal Regime</FormLabel>
+                    <FormLabel>Regime Fiscale</FormLabel>
                     <FormControl>
                         <Input placeholder="RF01" {...field} />
                     </FormControl>
+                    <FormDescription>
+                      Es: RF01 (Ordinario), RF02 (Contribuenti minimi), RF19 (Forfettario). L'XML verrà generato di conseguenza.
+                    </FormDescription>
                     <FormMessage />
                     </FormItem>
                 )}
@@ -228,7 +232,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
           </CardContent>
           <CardFooter className="flex justify-end">
              <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+              {form.formState.isSubmitting ? 'Salvataggio...' : 'Salva Modifiche'}
             </Button>
           </CardFooter>
         </Card>

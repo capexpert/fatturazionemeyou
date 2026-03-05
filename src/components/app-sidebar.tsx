@@ -22,9 +22,9 @@ import { Logo } from './logo';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/invoices', label: 'Invoices', icon: FileText },
-  { href: '/clients', label: 'Clients', icon: Users },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/invoices', label: 'Fatture', icon: FileText },
+  { href: '/clients', label: 'Clienti', icon: Users },
+  { href: '/settings', label: 'Impostazioni', icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -61,9 +61,9 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Logout" onClick={handleLogout}>
+            <SidebarMenuButton tooltip="Esci" onClick={handleLogout}>
               <LogOut />
-              <span>Logout</span>
+              <span>Esci</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

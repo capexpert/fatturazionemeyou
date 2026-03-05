@@ -15,7 +15,7 @@ export default async function EditInvoicePage({ params }: { params: { id: string
 
   return (
     <>
-      <PageHeader title={`Edit Invoice ${invoice.number}`} />
+      <PageHeader title={`Modifica Fattura ${invoice.number}`} />
       <InvoiceForm clients={clients} invoice={invoice} nextInvoiceNumber={invoice.number} />
     </>
   );

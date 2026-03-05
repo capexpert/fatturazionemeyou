@@ -8,6 +8,7 @@ import { useUser, useAuth, initiateAnonymousSignIn } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Logo } from '@/components/logo';
 
 export default function AppLayout({
   children,
@@ -30,8 +31,8 @@ export default function AppLayout({
     return (
         <div className="flex h-screen w-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4 p-4">
-                <h1 className="text-2xl font-bold">Fattura</h1>
-                <p className="text-muted-foreground">Connecting to services...</p>
+                <Logo />
+                <p className="text-muted-foreground">Connessione ai servizi...</p>
                 <Skeleton className="h-4 w-48" />
             </div>
         </div>

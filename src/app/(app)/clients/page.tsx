@@ -11,7 +11,7 @@ export default function ClientsPage() {
 
   return (
     <>
-      <PageHeader title="Clients">
+      <PageHeader title="Clienti">
         <ClientForm companyId={companyId} />
       </PageHeader>
       <Suspense fallback={<Skeleton className="h-96" />}>

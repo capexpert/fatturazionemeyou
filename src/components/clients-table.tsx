@@ -44,11 +44,11 @@ export function ClientsTable({ companyId }: { companyId: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>VAT Number</TableHead>
-                  <TableHead>Tax Code</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Partita IVA</TableHead>
+                  <TableHead>Codice Fiscale</TableHead>
+                  <TableHead>Città</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -64,7 +64,7 @@ export function ClientsTable({ companyId }: { companyId: string }) {
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">No clients found.</TableCell>
+                    <TableCell colSpan={5} className="text-center h-24">Nessun cliente trovato.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
