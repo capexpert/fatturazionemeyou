@@ -1,0 +1,174 @@
+/**
+ * Core Philosophy: This ruleset implements a strict, role-based access control (RBAC) model
+ * for a single-tenant application. Access to all data is restricted to authenticated users
+ * who are explicitly designated as administrators.
+ *
+ * Data Structure: The application data is organized into four top-level collections: /company,
+ * /clients, /invoices, and /invoiceItems. A special, non-public /roles_admin collection is
+ * used to manage administrator privileges.
+ *
+ * Key Security Decisions:
+ * - Admin-Only Access: All read and write operations on business data are restricted to users
+ *   whose UID exists in the /roles_admin collection.
+ * - Server-Side Role Management: The /roles_admin collection is not writable by clients,
+ *   ensuring that administrator roles can only be granted via a trusted server process or
+ *   the Firebase Console.
+ * - No Public Data: There are no publicly readable collections. All data is considered
+ *   private to the company's administrators.
+ *
+ * Denormalization for Authorization: While authorization is primarily role-based, each document
+ * in the /clients, /invoices, and /invoiceItems collections contains a denormalized 'companyId'
+ * field. This enforces relational integrity, ensuring that all data is correctly associated
+ * with the parent company, which is critical for data consistency and future scalability.
+ * This field is validated to be present on creation and immutable on update.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------------
+    // Helper Functions
+    // ------------------------------------------------------------------------
+
+    /**
+     * Returns true if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Returns true if the user is an administrator.
+     * Admin status is determined by the existence of a document in the /roles_admin
+     * collection with an ID matching the user's UID.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * Returns true if the user is an admin and the document being accessed already exists.
+     * Used to protect update and delete operations from acting on non-existent data.
+     */
+    function isAdminAndDocExists() {
+      return isAdmin() && resource != null;
+    }
+
+    /**
+     * Validates that the 'companyId' field is present on a new document.
+     * This ensures new data is correctly linked to the parent company.
+     */
+    function hasCompanyId() {
+      return request.resource.data.companyId != null;
+    }
+
+    /**
+     * Validates that the 'companyId' field has not been changed during an update.
+     * This enforces the immutability of the ownership link.
+     */
+    function companyIdIsImmutable() {
+      return request.resource.data.companyId == resource.data.companyId;
+    }
+
+    // ------------------------------------------------------------------------
+    // Administrative Roles
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Manages administrator roles. This collection is intentionally locked
+     *              down from client-side writes to ensure roles are only managed by a
+     *              trusted server environment (e.g., Cloud Functions, Admin SDK).
+     * @path        /roles_admin/{uid}
+     * @allow       (none) No client is ever allowed to read or write to this collection.
+     * @deny        A client app attempting to (create) or (get) a document in this path.
+     * @principle   Enforces server-side management of user roles for maximum security.
+     */
+    match /roles_admin/{uid} {
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // Company Data
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Secures the company's primary information document. This collection
+     *              is expected to contain only one document.
+     * @path        /company/{companyId}
+     * @allow       An authenticated admin user (create), (get), (update), or (delete) the company doc.
+     * @deny        A non-admin user attempting to (get) the company document.
+     * @principle   Restricts access to core business data to authorized administrators.
+     */
+    match /company/{companyId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdminAndDocExists();
+      allow delete: if isAdminAndDocExists();
+    }
+
+    // ------------------------------------------------------------------------
+    // Client Data
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Secures client records. All operations are restricted to admins.
+     *              Ensures that new clients are linked to the company.
+     * @path        /clients/{clientId}
+     * @allow       An admin user (create) a client record with a valid `companyId`.
+     * @deny        An admin user (create) a client record without a `companyId`.
+     * @principle   Combines role-based access with relational integrity validation.
+     */
+    match /clients/{clientId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() && hasCompanyId();
+      allow update: if isAdminAndDocExists() && companyIdIsImmutable();
+      allow delete: if isAdminAndDocExists();
+    }
+
+    // ------------------------------------------------------------------------
+    // Invoice Data
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Secures invoice documents. All operations are restricted to admins.
+     *              Ensures that new invoices are linked to the company.
+     * @path        /invoices/{invoiceId}
+     * @allow       An admin user (get) any invoice.
+     * @deny        A regular authenticated user attempting to (list) invoices.
+     * @principle   Combines role-based access with relational integrity validation.
+     */
+    match /invoices/{invoiceId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() && hasCompanyId();
+      allow update: if isAdminAndDocExists() && companyIdIsImmutable();
+      allow delete: if isAdminAndDocExists();
+    }
+
+    // ------------------------------------------------------------------------
+    // Invoice Item Data
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Secures invoice line items. All operations are restricted to admins.
+     *              Ensures that new invoice items are linked to the company.
+     * @path        /invoiceItems/{invoiceItemId}
+     * @allow       An admin user (delete) an existing invoice item.
+     * @deny        An admin user (update) an invoice item to change its `companyId`.
+     * @principle   Combines role-based access with relational integrity validation.
+     */
+    match /invoiceItems/{invoiceItemId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() && hasCompanyId();
+      allow update: if isAdminAndDocExists() && companyIdIsImmutable();
+      allow delete: if isAdminAndDocExists();
+    }
+  }
+}

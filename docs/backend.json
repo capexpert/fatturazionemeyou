@@ -1,0 +1,330 @@
+{
+  "entities": {
+    "Company": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Company",
+      "type": "object",
+      "description": "Represents the single Italian company (SRL) using the application, storing its fiscal and contact information required for invoicing.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Company entity."
+        },
+        "companyName": {
+          "type": "string",
+          "description": "The official registered name of the company."
+        },
+        "vatNumber": {
+          "type": "string",
+          "description": "The company's VAT (Value Added Tax) number, mandatory for Italian invoicing."
+        },
+        "taxCode": {
+          "type": "string",
+          "description": "The company's fiscal code (Codice Fiscale) in Italy."
+        },
+        "address": {
+          "type": "string",
+          "description": "The street address of the company."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city where the company is located."
+        },
+        "province": {
+          "type": "string",
+          "description": "The province where the company is located (e.g., RM for Rome)."
+        },
+        "zip": {
+          "type": "string",
+          "description": "The postal code of the company's address."
+        },
+        "country": {
+          "type": "string",
+          "description": "The country where the company is registered, typically 'IT' for Italy."
+        },
+        "pecEmail": {
+          "type": "string",
+          "description": "The company's Certified Electronic Mail (PEC) address, used for official communications in Italy.",
+          "format": "email"
+        },
+        "iban": {
+          "type": "string",
+          "description": "The International Bank Account Number (IBAN) of the company's bank account."
+        },
+        "fiscalRegime": {
+          "type": "string",
+          "description": "The company's fiscal regime (Regime Fiscale) according to Italian tax law, e.g., 'RF01' for ordinary."
+        }
+      },
+      "required": [
+        "id",
+        "companyName",
+        "vatNumber",
+        "taxCode",
+        "address",
+        "city",
+        "province",
+        "zip",
+        "country",
+        "pecEmail",
+        "iban",
+        "fiscalRegime"
+      ]
+    },
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
+      "type": "object",
+      "description": "Represents a client to whom the company issues invoices, storing their relevant fiscal and contact details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Client entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name or legal name of the client."
+        },
+        "vatNumber": {
+          "type": "string",
+          "description": "The client's VAT number, if applicable. Required for electronic invoicing to B2B clients."
+        },
+        "taxCode": {
+          "type": "string",
+          "description": "The client's fiscal code (Codice Fiscale) in Italy, used if VAT number is not present or for B2C clients."
+        },
+        "address": {
+          "type": "string",
+          "description": "The street address of the client."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city where the client is located."
+        },
+        "province": {
+          "type": "string",
+          "description": "The province where the client is located (e.g., MI for Milan)."
+        },
+        "zip": {
+          "type": "string",
+          "description": "The postal code of the client's address."
+        },
+        "country": {
+          "type": "string",
+          "description": "The country where the client is registered."
+        },
+        "pec": {
+          "type": "string",
+          "description": "The client's Certified Electronic Mail (PEC) address, used for official communications in Italy, or standard email if PEC is not available.",
+          "format": "email"
+        },
+        "sdiCode": {
+          "type": "string",
+          "description": "The 7-character 'Sistema di Interscambio' (SDI) code for the client, mandatory for electronic invoicing in Italy."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "address",
+        "city",
+        "province",
+        "zip",
+        "country",
+        "sdiCode"
+      ]
+    },
+    "Invoice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invoice",
+      "type": "object",
+      "description": "Represents a generated invoice, including its header details, financial summaries, and references to associated files and client.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Invoice entity."
+        },
+        "number": {
+          "type": "number",
+          "description": "The sequential number of the invoice for the given year (e.g., '1' for 1/2026)."
+        },
+        "year": {
+          "type": "number",
+          "description": "The fiscal year to which the invoice belongs (e.g., 2026)."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date the invoice was issued.",
+          "format": "date-time"
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Invoice)"
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "The sum of all invoice item line totals before VAT is applied."
+        },
+        "vatTotal": {
+          "type": "number",
+          "description": "The total amount of VAT applied to the invoice."
+        },
+        "total": {
+          "type": "number",
+          "description": "The grand total amount of the invoice, including subtotal and VAT."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the invoice (e.g., 'draft', 'issued', 'paid')."
+        },
+        "xmlUrl": {
+          "type": "string",
+          "description": "URL to the generated FatturaPA XML file stored in Firebase Storage.",
+          "format": "uri"
+        },
+        "pdfUrl": {
+          "type": "string",
+          "description": "URL to the generated courtesy PDF file stored in Firebase Storage.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the invoice record was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "number",
+        "year",
+        "date",
+        "clientId",
+        "subtotal",
+        "vatTotal",
+        "total",
+        "status",
+        "createdAt"
+      ]
+    },
+    "InvoiceItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InvoiceItem",
+      "type": "object",
+      "description": "Represents a single line item within an invoice, detailing the product or service, quantity, price, and VAT.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the InvoiceItem entity."
+        },
+        "invoiceId": {
+          "type": "string",
+          "description": "Reference to Invoice. (Relationship: Invoice 1:N InvoiceItem)"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the product or service for this invoice line item."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product or service."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "The price per unit of the product or service."
+        },
+        "vatRate": {
+          "type": "number",
+          "description": "The VAT (Value Added Tax) rate applicable to this line item (e.g., 4, 5, 10, 22)."
+        },
+        "lineTotal": {
+          "type": "number",
+          "description": "The total amount for this line item (quantity * unitPrice) before VAT."
+        }
+      },
+      "required": [
+        "id",
+        "invoiceId",
+        "description",
+        "quantity",
+        "unitPrice",
+        "vatRate",
+        "lineTotal"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/company/{companyId}",
+        "definition": {
+          "entityName": "Company",
+          "schema": {
+            "$ref": "#/backend/entities/Company"
+          },
+          "description": "Represents the single Italian company using the application. This collection will typically contain only one document (e.g., 'main_company').",
+          "params": [
+            {
+              "name": "companyId",
+              "description": "The unique identifier for the company."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Stores fiscal and contact details for clients. Each document includes a denormalized 'companyId' field for explicit ownership and authorization independence.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier for the client."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/invoices/{invoiceId}",
+        "definition": {
+          "entityName": "Invoice",
+          "schema": {
+            "$ref": "#/backend/entities/Invoice"
+          },
+          "description": "Stores details for generated invoices. Each document includes 'clientId' and a denormalized 'companyId' field for explicit ownership and authorization independence.",
+          "params": [
+            {
+              "name": "invoiceId",
+              "description": "The unique identifier for the invoice."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/invoiceItems/{invoiceItemId}",
+        "definition": {
+          "entityName": "InvoiceItem",
+          "schema": {
+            "$ref": "#/backend/entities/InvoiceItem"
+          },
+          "description": "Stores individual line items for an invoice. Each document includes 'invoiceId' and a denormalized 'companyId' for explicit ownership and authorization independence.",
+          "params": [
+            {
+              "name": "invoiceItemId",
+              "description": "The unique identifier for the invoice item."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure for FatturaNow is designed to support a single Italian company, prioritizing security, scalability, and debuggability as per the core design principles.\n\nAuthorization Independence & Denormalization:\nAll core business entities (Client, Invoice, InvoiceItem) are structured in top-level collections as requested. To strictly adhere to the \"Authorization Independence via Denormalization\" mandate, each document within these collections will explicitly include a `companyId` field. For this single-company application, this `companyId` will be a consistent identifier (e.g., \"main_company\") across all documents. This denormalization ensures that security rules can determine a document's ownership (`companyId`) directly from the document itself, without requiring `get()` operations to parent documents or external collections. This allows for atomic write operations and simplifies rule evaluation, making authorization robust and easy to debug.\n\nStructural Segregation & QAPs:\nEach collection (/company, /clients, /invoices, /invoiceItems) maintains a homogeneous security posture. All documents within /clients, /invoices, and /invoiceItems implicitly belong to the single company and are accessible by authorized administrators. This clear segregation, combined with the denormalized `companyId` on each document, enables secure `list` operations. Security rules will simply check if the authenticated user (`request.auth.uid`) is an authorized administrator for the single `companyId` (e.g., by checking for existence in a `/roles_admin/{uid}` collection). Since `companyId` is present in every document, a `list` query will inherently only return documents owned by the single, authorized company, without requiring expensive or insecure filters within the rules themselves.\n\nAccess Modeling (DBAC):\nAuthorization relies on `request.auth.uid`. For administrator roles, the \"Existence over Content\" pattern is employed. A dedicated collection, `/roles_admin/{uid}`, will contain documents where the ID is the `uid` of an administrator. Security rules will grant access if `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))` is true. This ensures role-based access is managed within the database, fulfilling DBAC requirements without relying on custom claims. (Note: `roles_admin` is not listed in `firestorePaths` due to schema constraints requiring a `$ref` to a defined entity.)\n\nHierarchical Paths for User-Owned Data (Implicitly):\nWhile the application is single-tenant, the structure implicitly follows hierarchical ownership. The entire application's data is conceptually \"owned\" by the single `Company` document. Although Client, Invoice, InvoiceItem are top-level collections, the explicit `companyId` field in each document provides the necessary ownership context, aligning with the principle of clear ownership for future scalability. InvoiceItem documents are linked to Invoice documents via the `invoiceId` field.\n\nData Clarity and Predictability:\nThe structure adheres to predictable schemas and explicit state modeling, such as the `status` field in Invoice, enhancing debuggability and maintainability. Semantic naming conventions are consistently applied (e.g., `companyId`, `clientId`, `invoiceId`).\n\nThis design creates a secure, efficient, and maintainable Firestore foundation for FatturaNow, ready for its current single-company scope and adaptable for potential future extensions."
+  }
+}
