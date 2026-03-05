@@ -10,7 +10,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ClientForm } from "./forms/client-form";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query } from "firebase/firestore";
 import type { Client } from "@/lib/types";
 import { Skeleton } from "./ui/skeleton";
 
@@ -18,9 +18,9 @@ export function ClientsTable({ companyId }: { companyId: string }) {
     const firestore = useFirestore();
 
     const clientsQuery = useMemoFirebase(() => {
-        if (!firestore || !companyId) return null;
-        return query(collection(firestore, 'clients'), where('companyId', '==', companyId));
-    }, [firestore, companyId]);
+        if (!firestore) return null;
+        return query(collection(firestore, 'clients'));
+    }, [firestore]);
 
     const { data: clients, isLoading } = useCollection<Client>(clientsQuery);
 

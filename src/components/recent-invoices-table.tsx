@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Download, Edit, Copy } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, where, limit } from "firebase/firestore";
+import { collection, query, orderBy, limit } from "firebase/firestore";
 import type { Client, Invoice } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { format } from 'date-fns';
@@ -52,7 +52,6 @@ export function RecentInvoicesTable() {
         if (!firestore) return null;
         return query(
           collection(firestore, 'invoices'), 
-          where('companyId', '==', 'main-company'), 
           orderBy('date', 'desc'),
           limit(5)
         );
@@ -61,7 +60,7 @@ export function RecentInvoicesTable() {
 
     const clientsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'clients'), where('companyId', '==', 'main-company'));
+        return query(collection(firestore, 'clients'));
     }, [firestore]);
     const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
     
