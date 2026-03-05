@@ -112,9 +112,7 @@ Guidelines:
 9.  Assume ModalitaPagamento 'MP05' (Bonifico) for DatiPagamento, and include the company's IBAN. The DataScadenzaPagamento can be the same as the invoice date.
 10. Ensure all numeric values are formatted correctly as decimals with a period separator (e.g., 12.34).
 11. If a client has neither vat_number nor tax_code, omit the corresponding XML fields in CessionarioCommittente/DatiAnagrafici.
-12. Output only the XML document. No additional text, comments, or explanations.
-
-Please generate the FatturaPA XML document now:`,
+12. Your final output must be a JSON object with a single key "xml", where the value is the complete FatturaPA XML document as a string. Do not include any other text, comments, or explanations outside of this JSON structure.`,
 });
 
 const generateFatturaPAXMLFlow = ai.defineFlow(
