@@ -3,7 +3,7 @@
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { InvoiceSchema, type InvoiceFormData } from '@/lib/schemas';
-import type { Client, InvoiceWithItems, Company } from '@/lib/types';
+import type { Client, InvoiceWithItems, Company, Invoice, InvoiceItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -36,10 +36,11 @@ import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { ClientForm } from './client-form';
 import { Separator } from '../ui/separator';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc, writeBatch, updateDoc, getDocs } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, useFirebaseApp } from '@/firebase';
+import { collection, query, doc, writeBatch, updateDoc, getDocs } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type InvoiceFormProps = {
   invoice?: InvoiceWithItems;
@@ -50,6 +51,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const firestore = useFirestore();
+  const firebaseApp = useFirebaseApp();
   const [isSaving, setIsSaving] = useState(false);
 
   const clientsQuery = useMemoFirebase(() => {
@@ -128,7 +130,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   };
   
   const handleSaveInvoice = async (data: InvoiceFormData) => {
-    if (!firestore || !company || !clients) {
+    if (!firestore || !company || !clients || !firebaseApp) {
       toast({ variant: 'destructive', title: 'Errore', description: 'I servizi non sono pronti. Riprova tra poco.' });
       return;
     }
@@ -148,7 +150,6 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
       const invoiceId = invoice?.id || doc(collection(firestore, 'invoices')).id;
       const invoiceRef = doc(firestore, 'invoices', invoiceId);
       
-      // Handle deleted items on update
       if (isUpdate && invoice) {
         const originalItemIds = invoice.items.map(i => i.id);
         const currentFormItemIds = new Set(data.items.map(item => item.id).filter(Boolean));
@@ -161,7 +162,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
         }
       }
       
-      const invoiceData = {
+      const invoiceData: Omit<Invoice, 'client' | 'xml_url' | 'pdf_url' | 'xml_content'> = {
         id: invoiceId,
         number: invoice?.number || nextInvoiceNumber,
         year: data.date.getFullYear(),
@@ -180,7 +181,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
       data.items.forEach(item => {
         const itemId = item.id || doc(collection(firestore, 'invoiceItems')).id;
         const itemRef = doc(firestore, 'invoiceItems', itemId);
-        batch.set(itemRef, {
+        const dbItem: InvoiceItem = {
           id: itemId,
           invoiceId: invoiceId,
           companyId: 'main-company',
@@ -189,14 +190,15 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
           quantity: item.quantity,
           unit_price: item.unit_price,
           vat_rate: item.vat_rate,
-        });
+        };
+        batch.set(itemRef, dbItem);
       });
 
       await batch.commit();
       
       toast({ title: 'Successo!', description: 'Fattura salvata nel database.' });
 
-      // Now, generate and save the XML
+      // Generate and save the XML
       const xmlInput = {
         company: {
           company_name: company.company_name,
@@ -241,16 +243,16 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
         })),
       };
 
-      const result = await generateInvoiceXMLAction(xmlInput);
+      const xmlResult = await generateInvoiceXMLAction(xmlInput);
 
-      if (result.xml) {
-        await updateDoc(invoiceRef, { xml_content: result.xml, status: 'sent' });
+      if (xmlResult.xml) {
+        await updateDoc(invoiceRef, { xml_content: xmlResult.xml, status: 'sent' });
         toast({ title: 'Successo!', description: 'File XML generato e salvato.' });
       } else {
         toast({
           variant: 'destructive',
           title: 'Errore Generazione XML',
-          description: result.message || 'Non è stato possibile generare il file XML. La fattura è salvata come bozza.',
+          description: xmlResult.message || 'Non è stato possibile generare il file XML. La fattura è salvata come bozza.',
         });
       }
       
@@ -265,11 +267,21 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   }
 
 
+  if (isLoadingClients || isLoadingCompany) {
+      return (
+          <div className="space-y-8">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-[400px] w-full" />
+              <Skeleton className="h-48 w-full" />
+          </div>
+      )
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSaveInvoice)} className="space-y-8">
-        <div className="grid grid-cols-1 gap-8">
-            <div className="col-span-1 space-y-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="col-span-1 lg:col-span-2 space-y-8">
                 <Card>
                     <CardHeader>
                     <CardTitle>Dettagli Fattura</CardTitle>
@@ -373,8 +385,6 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
                     <CardContent className="space-y-4">
                     <div className="space-y-4">
                         {fields.map((field, index) => {
-                        const netTotal = (watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unit_price || 0);
-                        const grossTotal = netTotal * (1 + (watchedItems[index]?.vat_rate || 0) / 100);
                         return (
                             <div key={field.id} className="rounded-lg border bg-card p-4 relative space-y-4">
                                 {fields.length > 1 && (
@@ -456,7 +466,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
                                     <FormItem>
                                         <FormLabel>Totale Netto</FormLabel>
                                         <FormControl>
-                                            <Input disabled value={formatCurrency(netTotal)} />
+                                            <Input disabled value={formatCurrency(watchedItems[index].quantity * watchedItems[index].unit_price)} />
                                         </FormControl>
                                     </FormItem>
                                     <FormItem>
@@ -464,21 +474,29 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
                                         <FormControl>
                                         <Input
                                             type="text"
-                                            placeholder="0.00"
-                                            value={watchedItems[index].unit_price > 0 ? (Math.round(grossTotal * 100) / 100).toFixed(2) : ''}
+                                            placeholder="0,00"
+                                            value={
+                                                watchedItems[index]?.unit_price > 0
+                                                ? (
+                                                    (watchedItems[index].quantity * watchedItems[index].unit_price) *
+                                                    (1 + watchedItems[index].vat_rate / 100)
+                                                    ).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                : ''
+                                            }
                                             onChange={(e) => {
-                                                const value = e.target.value.replace(',', '.');
-                                                if (value === '' || isNaN(parseFloat(value))) {
+                                                const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                                                const grossTotalValue = parseFloat(value);
+                                                
+                                                if (isNaN(grossTotalValue)) {
                                                     form.setValue(`items.${index}.unit_price`, 0, { shouldValidate: true, shouldDirty: true });
                                                     return;
                                                 }
                                                 
-                                                const grossTotalValue = parseFloat(value);
                                                 const item = form.getValues(`items.${index}`);
                                                 const quantity = item.quantity || 1;
                                                 const vatRate = item.vat_rate || 0;
 
-                                                if (!isNaN(grossTotalValue) && quantity > 0) {
+                                                if (quantity > 0) {
                                                     const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
                                                     form.setValue(`items.${index}.unit_price`, parseFloat(newUnitPrice.toFixed(2)), { shouldValidate: true, shouldDirty: true });
                                                 }
@@ -503,34 +521,34 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
                     </CardContent>
                 </Card>
             </div>
-            <div className="col-span-1">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Riepilogo</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Imponibile</span>
-                                <span className="font-medium">{formatCurrency(subtotal)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">IVA</span>
-                                <span className="font-medium">{formatCurrency(vatTotal)}</span>
-                            </div>
-                            <Separator className="my-2" />
-                            <div className="flex justify-between text-lg font-bold">
-                                <span>Totale</span>
-                                <span>{formatCurrency(grandTotal)}</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Button type="submit" className="w-full" disabled={isSaving}>
-                            {isSaving ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva Fattura')}
-                        </Button>
-                    </CardFooter>
-                </Card>
+            <div className="col-span-1 lg:col-span-1 space-y-8">
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Riepilogo e Salvataggio</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="space-y-4">
+                          <div className="flex justify-between">
+                              <span className="text-muted-foreground">Imponibile</span>
+                              <span className="font-medium">{formatCurrency(subtotal)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                              <span className="text-muted-foreground">IVA</span>
+                              <span className="font-medium">{formatCurrency(vatTotal)}</span>
+                          </div>
+                          <Separator className="my-2" />
+                          <div className="flex justify-between text-lg font-bold">
+                              <span>Totale</span>
+                              <span>{formatCurrency(grandTotal)}</span>
+                          </div>
+                      </div>
+                  </CardContent>
+                  <CardFooter>
+                      <Button type="submit" className="w-full" disabled={isSaving}>
+                          {isSaving ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva e Genera Documenti')}
+                      </Button>
+                  </CardFooter>
+              </Card>
             </div>
         </div>
       </form>

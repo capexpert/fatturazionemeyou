@@ -93,14 +93,12 @@ export function InvoicesTable() {
         try {
             const batch = writeBatch(firestore);
     
-            // 1. Delete invoice items
             const itemsQuery = query(collection(firestore, 'invoiceItems'), where('invoiceId', '==', invoiceToDelete.id));
             const itemsSnapshot = await getDocs(itemsQuery);
             itemsSnapshot.forEach(itemDoc => {
                 batch.delete(itemDoc.ref);
             });
     
-            // 2. Delete the invoice itself
             const invoiceRef = doc(firestore, 'invoices', invoiceToDelete.id);
             batch.delete(invoiceRef);
     
@@ -179,7 +177,7 @@ export function InvoicesTable() {
                             <DropdownMenuContent>
                             <DropdownMenuItem 
                                 disabled={!invoice.xml_content}
-                                onClick={() => downloadXml(invoice.xml_content!, `Fattura_${invoice.number.replace('/', '-')}.xml`)}
+                                onClick={() => downloadXml(invoice.xml_content!, `Fattura_${invoice.number.replace(/\//g, '-')}.xml`)}
                             >
                                 <Download className="mr-2 h-4 w-4" />
                                 Scarica XML
