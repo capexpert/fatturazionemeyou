@@ -180,9 +180,19 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
 
       await setDoc(invoiceRef, invoiceData, { merge: true });
       
-      toast({ title: 'Successo!', description: 'Fattura salvata nel database.' });
+      toast({ title: 'Successo!', description: 'Bozza della fattura salvata. Ora genero XML...' });
 
-      // Generate and save the XML
+      const datiRiepilogo = watchedItems.reduce((acc, item) => {
+          const vatRate = item.vat_rate;
+          const lineTotal = (item.quantity || 0) * (item.unit_price || 0);
+          if (!acc[vatRate]) {
+              acc[vatRate] = { imponibile: 0, imposta: 0, aliquota: vatRate };
+          }
+          acc[vatRate].imponibile += lineTotal;
+          acc[vatRate].imposta += lineTotal * (vatRate / 100);
+          return acc;
+      }, {} as Record<number, { imponibile: number, imposta: number, aliquota: number }>);
+
       const xmlInput = {
         company: {
           company_name: company.company_name,
@@ -225,6 +235,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
             vat_rate: item.vat_rate,
             line_total: item.quantity * item.unit_price,
         })),
+        dati_riepilogo: Object.values(datiRiepilogo),
       };
 
       const xmlResult = await generateInvoiceXMLAction(xmlInput);

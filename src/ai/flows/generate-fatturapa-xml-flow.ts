@@ -59,11 +59,18 @@ const InvoiceDataSchema = z.object({
 });
 export type InvoiceData = z.infer<typeof InvoiceDataSchema>;
 
+const DatiRiepilogoItemSchema = z.object({
+  imponibile: z.number().describe('The taxable amount for this VAT rate.'),
+  imposta: z.number().describe('The tax amount for this VAT rate.'),
+  aliquota: z.number().describe('The VAT rate percentage.'),
+});
+
 const GenerateFatturaPAXMLInputSchema = z.object({
   company: CompanySchema,
   client: ClientSchema,
   invoice: InvoiceDataSchema,
   invoice_items: z.array(InvoiceItemSchema),
+  dati_riepilogo: z.array(DatiRiepilogoItemSchema).describe('Pre-aggregated VAT summary data.'),
 }).describe('Input data for generating a FatturaPA XML document.');
 export type GenerateFatturaPAXMLInput = z.infer<typeof GenerateFatturaPAXMLInputSchema>;
 
@@ -80,39 +87,38 @@ const prompt = ai.definePrompt({
   name: 'generateFatturaPAXMLPrompt',
   input: { schema: GenerateFatturaPAXMLInputSchema },
   output: { schema: GenerateFatturaPAXMLOutputSchema },
-  prompt: `System: You are an expert in Italian fiscal regulations and the FatturaPA electronic invoicing standard. Your task is to generate a valid FatturaPA XML document (versione 1.2) based on the provided invoice, company, and client data. Ensure strict compliance with the XML schema and Italian fiscal rules.
+  prompt: `System: You are an expert in Italian fiscal regulations and the FatturaPA electronic invoicing standard. Your task is to generate a valid FatturaPA XML document (versione 1.2) based on the provided JSON data. The data has been pre-processed, so you only need to map the fields to the correct XML tags.
 
 User:
-Generate a FatturaPA XML (versione 1.2) for the following invoice details. Fill in the data carefully, ensuring all fiscal rules and XML schema requirements are met.
+Generate a FatturaPA XML (versione 1.2) using the following data.
 
-Company Details:
+Company:
 {{{json company}}}
 
-Client Details:
+Client:
 {{{json client}}}
 
-Invoice Details:
+Invoice:
 {{{json invoice}}}
 
 Invoice Items:
 {{{json invoice_items}}}
 
+VAT Summary:
+{{{json dati_riepilogo}}}
+
 Guidelines:
-1.  The root element must be <p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">.
-2.  FormatoTrasmissione must be 'FPR12'.
-3.  CodiceDestinatario should be "{{client.sdi_code}}" if provided and not '0000000'. If it is '0000000', then use that value and also include the <PECDestinatario>{{client.pec}}</PECDestinatario> tag.
-4.  TipoDocumento must be 'TD01'.
-5.  Divisa must be '{{invoice.currency}}'.
-6.  For each item in DettaglioLinee, create the <Descrizione> tag by combining the 'title' and 'description' fields in the format: "title - description".
-7.  For each DettaglioLinee, provide a sequential NumeroLinea starting from 1.
-8.  For DatiRiepilogo, aggregate the invoice_items by their 'vat_rate'. For each unique 'vat_rate':
-    - Calculate 'ImponibileImporto' (Taxable amount) as the sum of 'line_total' for items with this VAT rate.
-    - Calculate 'Imposta' (VAT amount) as the sum of ('line_total' * 'vat_rate' / 100) for items with this VAT rate.
-    - Ensure both 'ImponibileImporto' and 'Imposta' are correctly rounded to 2 decimal places.
-9.  Assume ModalitaPagamento 'MP05' (Bonifico) for DatiPagamento, and include the company's IBAN. The DataScadenzaPagamento can be the same as the invoice date.
-10. Ensure all numeric values are formatted correctly as decimals with a period separator (e.g., 12.34).
-11. If a client has neither vat_number nor tax_code, omit the corresponding XML fields in CessionarioCommittente/DatiAnagrafici.
-12. Your final output MUST be a valid JSON object. It must contain a single key "xml". The value for the "xml" key must be the complete FatturaPA XML document as a string. Do not include any other text, comments, markdown backticks, or explanations outside of this JSON structure. Example of a valid response: {"xml": "<?xml version=..."}`,
+1.  Root element: <p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+2.  FormatoTrasmissione: 'FPR12'
+3.  CodiceDestinatario: Use "{{client.sdi_code}}". If it is '0000000', also include <PECDestinatario>{{client.pec}}</PECDestinatario>.
+4.  TipoDocumento: 'TD01'
+5.  Divisa: '{{invoice.currency}}'
+6.  For each item in 'invoice_items', create a <DettaglioLinee> block.
+7.  Inside each <DettaglioLinee>, create the <Descrizione> tag by combining the 'title' and 'description' fields in the format: "title - description".
+8.  Use the pre-calculated VAT summary from 'dati_riepilogo' to create the <DatiRiepilogo> block. For each item in the summary, create a block with <AliquotaIVA>, <ImponibileImporto>, and <Imposta>.
+9.  For DatiPagamento, use ModalitaPagamento 'MP05' (Bonifico) and include the company's IBAN. Set DataScadenzaPagamento to the invoice date.
+10. Ensure all numeric values are formatted to 2 decimal places with a period separator (e.g., 12.34).
+11. Your final output MUST be a valid JSON object containing a single key "xml". The value must be the complete XML document as a string. Do not include any other text, comments, markdown backticks, or explanations. Example: {"xml": "<?xml version=..."}`,
 });
 
 const generateFatturaPAXMLFlow = ai.defineFlow(
