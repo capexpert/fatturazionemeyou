@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Download, Edit, Copy, Trash2 } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, limit, doc, writeBatch, where, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, doc, deleteDoc } from "firebase/firestore";
 import type { Client, Invoice } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { format } from 'date-fns';
@@ -92,18 +92,8 @@ export function RecentInvoicesTable() {
     async function handleDeleteInvoice() {
         if (!invoiceToDelete || !firestore) return;
         try {
-            const batch = writeBatch(firestore);
-    
-            const itemsQuery = query(collection(firestore, 'invoiceItems'), where('invoiceId', '==', invoiceToDelete.id));
-            const itemsSnapshot = await getDocs(itemsQuery);
-            itemsSnapshot.forEach(itemDoc => {
-                batch.delete(itemDoc.ref);
-            });
-    
             const invoiceRef = doc(firestore, 'invoices', invoiceToDelete.id);
-            batch.delete(invoiceRef);
-    
-            await batch.commit();
+            await deleteDoc(invoiceRef);
     
             toast({ title: "Successo!", description: "Fattura eliminata." });
         } catch (error) {

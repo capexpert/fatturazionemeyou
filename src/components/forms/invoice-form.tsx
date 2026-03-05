@@ -3,7 +3,7 @@
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { InvoiceSchema, type InvoiceFormData } from '@/lib/schemas';
-import type { Client, InvoiceWithItems, Company, Invoice, InvoiceItem } from '@/lib/types';
+import type { Client, Invoice, Company, InvoiceItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -37,12 +37,12 @@ import { useEffect, useState } from 'react';
 import { ClientForm } from './client-form';
 import { Separator } from '../ui/separator';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, query, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
 
 type InvoiceFormProps = {
-  invoice?: InvoiceWithItems;
+  invoice?: Invoice;
   nextInvoiceNumber: string;
 };
 
@@ -153,22 +153,8 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
     }
 
     try {
-      const batch = writeBatch(firestore);
-      const isUpdate = !!invoice?.id;
       const invoiceId = invoice?.id || doc(collection(firestore, 'invoices')).id;
       const invoiceRef = doc(firestore, 'invoices', invoiceId);
-      
-      if (isUpdate && invoice) {
-        const originalItemIds = invoice.items.map(i => i.id);
-        const currentFormItemIds = new Set(data.items.map(item => item.id).filter(Boolean));
-
-        for (const originalId of originalItemIds) {
-          if (!currentFormItemIds.has(originalId)) {
-            const itemToDeleteRef = doc(firestore, 'invoiceItems', originalId);
-            batch.delete(itemToDeleteRef);
-          }
-        }
-      }
       
       const invoiceData: Omit<Invoice, 'client' | 'xml_url' | 'pdf_url' | 'xml_content'> = {
         id: invoiceId,
@@ -182,27 +168,17 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
         total: grandTotal,
         status: invoice?.status || 'draft',
         created_at: invoice?.created_at || new Date().toISOString(),
+        items: data.items.map(item => ({
+            id: item.id || doc(collection(firestore, 'dummy-id-generator')).id,
+            title: item.title,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            vat_rate: item.vat_rate,
+        })),
       };
-      
-      batch.set(invoiceRef, invoiceData, { merge: true });
-      
-      data.items.forEach(item => {
-        const itemId = item.id || doc(collection(firestore, 'invoiceItems')).id;
-        const itemRef = doc(firestore, 'invoiceItems', itemId);
-        const dbItem: InvoiceItem = {
-          id: itemId,
-          invoiceId: invoiceId,
-          companyId: 'main-company',
-          title: item.title,
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          vat_rate: item.vat_rate,
-        };
-        batch.set(itemRef, dbItem);
-      });
 
-      await batch.commit();
+      await setDoc(invoiceRef, invoiceData, { merge: true });
       
       toast({ title: 'Successo!', description: 'Fattura salvata nel database.' });
 
@@ -241,7 +217,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
             total: grandTotal,
             currency: 'EUR',
         },
-        invoice_items: data.items.map((item) => ({
+        invoice_items: invoiceData.items.map((item) => ({
             title: item.title,
             description: item.description,
             quantity: item.quantity,

@@ -2,11 +2,10 @@
 
 import { PageHeader } from "@/components/page-header";
 import { InvoiceForm } from "@/components/forms/invoice-form";
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, where } from "firebase/firestore";
-import type { Invoice, InvoiceItem, InvoiceWithItems } from "@/lib/types";
+import { useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
+import type { Invoice } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMemo } from "react";
 import { notFound, useParams } from "next/navigation";
 
 export default function EditInvoicePage() {
@@ -15,28 +14,14 @@ export default function EditInvoicePage() {
 
   const id = params?.id;
 
-  // Fetch invoice
+  // Fetch invoice (which now includes items)
   const invoiceRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
     return doc(firestore, 'invoices', id);
   }, [firestore, id]);
-  const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceRef);
+  const { data: invoice, isLoading } = useDoc<Invoice>(invoiceRef);
 
-  // Fetch invoice items
-  const itemsQuery = useMemoFirebase(() => {
-    if (!firestore || !id) return null;
-    return query(collection(firestore, 'invoiceItems'), where('invoiceId', '==', id));
-  }, [firestore, id]);
-  const { data: items, isLoading: isLoadingItems } = useCollection<InvoiceItem>(itemsQuery);
-
-  const invoiceWithItems = useMemo<InvoiceWithItems | null>(() => {
-    if (!invoice || !items) return null;
-    return { ...invoice, items };
-  }, [invoice, items]);
-
-  const isLoading = !id || isLoadingInvoice || isLoadingItems;
-
-  if (isLoading) {
+  if (isLoading || !id) {
       return (
           <>
               <PageHeader title="Modifica Fattura" />
@@ -48,14 +33,14 @@ export default function EditInvoicePage() {
       );
   }
   
-  if (!invoiceWithItems) {
+  if (!invoice) {
       notFound();
   }
 
   return (
     <>
-      <PageHeader title={`Modifica Fattura ${invoiceWithItems.number}`} />
-      <InvoiceForm invoice={invoiceWithItems} nextInvoiceNumber={invoiceWithItems.number} />
+      <PageHeader title={`Modifica Fattura ${invoice.number}`} />
+      <InvoiceForm invoice={invoice} nextInvoiceNumber={invoice.number} />
     </>
   );
 }

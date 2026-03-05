@@ -28,6 +28,15 @@ export type Client = {
   sdi_code?: string;
 };
 
+export type InvoiceItem = {
+  id: string;
+  title: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  vat_rate: number; // as percentage, e.g., 22
+};
+
 export type Invoice = {
   id: string;
   number: string;
@@ -43,20 +52,6 @@ export type Invoice = {
   pdf_url?: string;
   xml_content?: string;
   created_at: string; // ISO 8601
-  client?: Client; // Populated for display
-};
-
-export type InvoiceItem = {
-  id: string;
-  invoiceId: string;
-  companyId: string;
-  title: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  vat_rate: number; // as percentage, e.g., 22
-};
-
-export type InvoiceWithItems = Invoice & {
   items: InvoiceItem[];
+  client?: Client; // Populated for display
 };
