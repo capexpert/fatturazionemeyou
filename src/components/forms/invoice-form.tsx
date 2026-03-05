@@ -36,11 +36,10 @@ import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { ClientForm } from './client-form';
 import { Separator } from '../ui/separator';
-import { useCollection, useFirestore, useMemoFirebase, useDoc, useFirebaseApp } from '@/firebase';
-import { collection, query, doc, writeBatch, updateDoc, getDocs } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type InvoiceFormProps = {
   invoice?: InvoiceWithItems;
@@ -51,7 +50,6 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const firestore = useFirestore();
-  const firebaseApp = useFirebaseApp();
   const [isSaving, setIsSaving] = useState(false);
 
   const clientsQuery = useMemoFirebase(() => {
@@ -130,11 +128,21 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   };
   
   const handleSaveInvoice = async (data: InvoiceFormData) => {
-    if (!firestore || !company || !clients || !firebaseApp) {
+    if (!firestore || !company || !clients) {
       toast({ variant: 'destructive', title: 'Errore', description: 'I servizi non sono pronti. Riprova tra poco.' });
       return;
     }
     
+    if (!company.company_name || !company.vat_number) {
+        toast({
+            variant: 'destructive',
+            title: 'Profilo Aziendale Incompleto',
+            description: 'Per favore, completa il tuo profilo aziendale nelle Impostazioni prima di generare una fattura.',
+        });
+        setIsSaving(false);
+        return;
+    }
+
     setIsSaving(true);
     
     const client = clients.find(c => c.id === data.client_id);
@@ -280,277 +288,272 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSaveInvoice)} className="space-y-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <div className="col-span-1 lg:col-span-2 space-y-8">
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Dettagli Fattura</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-end">
-                        <FormField
-                        control={form.control}
-                        name="client_id"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Cliente</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} value={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleziona un cliente" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                <div onPointerDown={e => e.preventDefault()} >
-                                    <ClientForm 
-                                    companyId="main-company"
-                                    onClientCreated={handleClientCreated}
-                                    trigger={
-                                        <div className="flex w-full cursor-pointer items-center gap-2 p-2 text-sm hover:bg-accent rounded-sm">
-                                            <PlusCircle className="h-4 w-4" />
-                                            Aggiungi nuovo cliente
-                                        </div>
-                                    }
-                                    />
+        <Card>
+            <CardHeader>
+            <CardTitle>Dettagli Fattura</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-end">
+                <FormField
+                control={form.control}
+                name="client_id"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Cliente</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name} value={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un cliente" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        <div onPointerDown={e => e.preventDefault()} >
+                            <ClientForm 
+                            companyId="main-company"
+                            onClientCreated={handleClientCreated}
+                            trigger={
+                                <div className="flex w-full cursor-pointer items-center gap-2 p-2 text-sm hover:bg-accent rounded-sm">
+                                    <PlusCircle className="h-4 w-4" />
+                                    Aggiungi nuovo cliente
                                 </div>
-                                <Separator className="my-1" />
-                                {isLoadingClients ? (
-                                    <SelectItem value="loading" disabled>Caricamento clienti...</SelectItem>
-                                ) : (
-                                    clients && clients.map((client) => (
-                                    <SelectItem key={client.id} value={client.id}>
-                                        {client.name}
-                                    </SelectItem>
-                                    ))
-                                )}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
+                            }
+                            />
+                        </div>
+                        <Separator className="my-1" />
+                        {isLoadingClients ? (
+                            <SelectItem value="loading" disabled>Caricamento clienti...</SelectItem>
+                        ) : (
+                            clients && clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                                {client.name}
+                            </SelectItem>
+                            ))
                         )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="date"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-col pt-2">
-                                <FormLabel>Data Fattura</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={'outline'}
-                                        className={cn(
-                                            'w-full pl-3 text-left font-normal',
-                                            !field.value && 'text-muted-foreground'
-                                        )}
-                                        >
-                                        {field.value ? (
-                                            format(field.value, 'PPP')
-                                        ) : (
-                                            <span>Scegli una data</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormItem>
-                            <FormLabel>Numero Fattura</FormLabel>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col pt-2">
+                        <FormLabel>Data Fattura</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
                             <FormControl>
-                                <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
-                            </FormControl>
-                        </FormItem>
-                    </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Articoli</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                    <div className="space-y-4">
-                        {fields.map((field, index) => {
-                        return (
-                            <div key={field.id} className="rounded-lg border bg-card p-4 relative space-y-4">
-                                {fields.length > 1 && (
-                                    <Button variant="ghost" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-8 w-8">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                <Button
+                                variant={'outline'}
+                                className={cn(
+                                    'w-full pl-3 text-left font-normal',
+                                    !field.value && 'text-muted-foreground'
                                 )}
-                                <FormField
-                                    control={form.control}
-                                    name={`items.${index}.title`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Titolo</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Es. Sviluppo sito web" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`items.${index}.description`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Descrizione</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Descrizione dettagliata del servizio fornito" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                                    <FormField
-                                        control={form.control}
-                                        name={`items.${index}.quantity`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Qtà</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`items.${index}.unit_price`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Prezzo</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`items.${index}.vat_rate`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>IVA</FormLabel>
-                                                <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
-                                                    <FormControl>
-                                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {[22, 10, 5, 4].map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormItem>
-                                        <FormLabel>Totale Netto</FormLabel>
-                                        <FormControl>
-                                            <Input disabled value={formatCurrency(watchedItems[index].quantity * watchedItems[index].unit_price)} />
-                                        </FormControl>
-                                    </FormItem>
-                                    <FormItem>
-                                        <FormLabel>Totale Lordo</FormLabel>
-                                        <FormControl>
-                                        <Input
-                                            type="text"
-                                            placeholder="0,00"
-                                            value={
-                                                watchedItems[index]?.unit_price > 0
-                                                ? (
-                                                    (watchedItems[index].quantity * watchedItems[index].unit_price) *
-                                                    (1 + watchedItems[index].vat_rate / 100)
-                                                    ).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                                : ''
-                                            }
-                                            onChange={(e) => {
-                                                const value = e.target.value.replace(/\./g, '').replace(',', '.');
-                                                const grossTotalValue = parseFloat(value);
-                                                
-                                                if (isNaN(grossTotalValue)) {
-                                                    form.setValue(`items.${index}.unit_price`, 0, { shouldValidate: true, shouldDirty: true });
-                                                    return;
-                                                }
-                                                
-                                                const item = form.getValues(`items.${index}`);
-                                                const quantity = item.quantity || 1;
-                                                const vatRate = item.vat_rate || 0;
+                                >
+                                {field.value ? (
+                                    format(field.value, 'PPP')
+                                ) : (
+                                    <span>Scegli una data</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormItem>
+                    <FormLabel>Numero Fattura</FormLabel>
+                    <FormControl>
+                        <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
+                    </FormControl>
+                </FormItem>
+            </div>
+            </CardContent>
+        </Card>
 
-                                                if (quantity > 0) {
-                                                    const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
-                                                    form.setValue(`items.${index}.unit_price`, parseFloat(newUnitPrice.toFixed(2)), { shouldValidate: true, shouldDirty: true });
-                                                }
-                                            }}
-                                        />
+        <Card>
+            <CardHeader>
+            <CardTitle>Articoli</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+            <div className="space-y-4">
+                {fields.map((field, index) => {
+                return (
+                    <div key={field.id} className="rounded-lg border bg-card p-4 relative space-y-4">
+                        {fields.length > 1 && (
+                            <Button variant="ghost" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-8 w-8">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                        <FormField
+                            control={form.control}
+                            name={`items.${index}.title`}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Titolo</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Es. Sviluppo sito web" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={`items.${index}.description`}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Descrizione</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Descrizione dettagliata del servizio fornito" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.quantity`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Qtà</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                                         </FormControl>
+                                        <FormMessage />
                                     </FormItem>
-                                </div>
-                            </div>
-                        )
-                        })}
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.unit_price`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Prezzo</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.vat_rate`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>IVA</FormLabel>
+                                        <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {[22, 10, 5, 4].map(rate => <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormItem>
+                                <FormLabel>Totale Netto</FormLabel>
+                                <FormControl>
+                                    <Input disabled value={formatCurrency(watchedItems[index].quantity * watchedItems[index].unit_price)} />
+                                </FormControl>
+                            </FormItem>
+                            <FormItem>
+                                <FormLabel>Totale Lordo</FormLabel>
+                                <FormControl>
+                                <Input
+                                    type="text"
+                                    placeholder="0,00"
+                                    value={
+                                        watchedItems[index]?.unit_price > 0
+                                        ? (
+                                            (watchedItems[index].quantity * watchedItems[index].unit_price) *
+                                            (1 + watchedItems[index].vat_rate / 100)
+                                            ).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                        : ''
+                                    }
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                                        const grossTotalValue = parseFloat(value);
+                                        
+                                        if (isNaN(grossTotalValue)) {
+                                            form.setValue(`items.${index}.unit_price`, 0, { shouldValidate: true, shouldDirty: true });
+                                            return;
+                                        }
+                                        
+                                        const item = form.getValues(`items.${index}`);
+                                        const quantity = item.quantity || 1;
+                                        const vatRate = item.vat_rate || 0;
+
+                                        if (quantity > 0) {
+                                            const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
+                                            form.setValue(`items.${index}.unit_price`, parseFloat(newUnitPrice.toFixed(2)), { shouldValidate: true, shouldDirty: true });
+                                        }
+                                    }}
+                                />
+                                </FormControl>
+                            </FormItem>
+                        </div>
                     </div>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => append({ id: '', title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
-                    >
-                        <PlusCircle className="mr-2 h-4 w-4" /> Aggiungi Articolo
-                    </Button>
-                    </CardContent>
-                </Card>
+                )
+                })}
             </div>
-            <div className="col-span-1 lg:col-span-1 space-y-8">
-              <Card>
-                  <CardHeader>
-                      <CardTitle>Riepilogo e Salvataggio</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <div className="space-y-4">
-                          <div className="flex justify-between">
-                              <span className="text-muted-foreground">Imponibile</span>
-                              <span className="font-medium">{formatCurrency(subtotal)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                              <span className="text-muted-foreground">IVA</span>
-                              <span className="font-medium">{formatCurrency(vatTotal)}</span>
-                          </div>
-                          <Separator className="my-2" />
-                          <div className="flex justify-between text-lg font-bold">
-                              <span>Totale</span>
-                              <span>{formatCurrency(grandTotal)}</span>
-                          </div>
-                      </div>
-                  </CardContent>
-                  <CardFooter>
-                      <Button type="submit" className="w-full" disabled={isSaving}>
-                          {isSaving ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva e Genera Documenti')}
-                      </Button>
-                  </CardFooter>
-              </Card>
-            </div>
-        </div>
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => append({ id: '', title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 })}
+            >
+                <PlusCircle className="mr-2 h-4 w-4" /> Aggiungi Articolo
+            </Button>
+            </CardContent>
+        </Card>
+      
+        <Card>
+            <CardHeader>
+                <CardTitle>Riepilogo e Salvataggio</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Imponibile</span>
+                        <span className="font-medium">{formatCurrency(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">IVA</span>
+                        <span className="font-medium">{formatCurrency(vatTotal)}</span>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="flex justify-between text-lg font-bold">
+                        <span>Totale</span>
+                        <span>{formatCurrency(grandTotal)}</span>
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button type="submit" className="w-full" disabled={isSaving}>
+                    {isSaving ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva e Genera Documenti')}
+                </Button>
+            </CardFooter>
+        </Card>
       </form>
     </Form>
   );
