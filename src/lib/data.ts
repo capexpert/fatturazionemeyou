@@ -1,4 +1,6 @@
 import type { Company, Client, Invoice, InvoiceWithItems, InvoiceItem } from '@/lib/types';
+import { getDocs, collection, query, where, getDoc, doc } from 'firebase/firestore';
+
 
 // This file previously contained mock data. It is now being replaced by
 // real-time data fetching from Firestore in the components themselves.
@@ -10,26 +12,33 @@ import type { Company, Client, Invoice, InvoiceWithItems, InvoiceItem } from '@/
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export async function getCompanyProfile(): Promise<Company | null> {
+  // This needs to be implemented with server-side Firestore access
   await delay(100);
   return null;
 }
 
 export async function getClients(): Promise<Client[]> {
+    // This needs to be implemented with server-side Firestore access
   await delay(300);
   return [];
 }
 
 export async function getClientById(id: string): Promise<Client | undefined> {
+    // This needs to be implemented with server-side Firestore access
   await delay(100);
   return undefined;
 }
 
 export async function getInvoices(): Promise<Invoice[]> {
+    // This is a mock function. The component `invoices-table` is now a client
+    // component and fetches its own data. This function remains for other
+    // server components that haven't been migrated yet.
   await delay(400);
   return [];
 }
 
 export async function getInvoiceById(id: string): Promise<InvoiceWithItems | undefined> {
+  // This needs to be implemented with server-side Firestore access
   await delay(200);
   return undefined;
 }
@@ -38,36 +47,4 @@ export async function getNextInvoiceNumber(year: number): Promise<string> {
     await delay(50);
     // This logic will be moved to a client-side hook
     return `1/${year}`;
-}
-
-export async function saveInvoice(invoiceData: { id?: string, client_id: string, date: Date, items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'companyId'>[] }): Promise<InvoiceWithItems> {
-  await delay(100);
-  
-  const subtotal = invoiceData.items.reduce((acc, item) => acc + item.quantity * item.unit_price, 0);
-  const vat_total = invoiceData.items.reduce((acc, item) => acc + (item.quantity * item.unit_price * (item.vat_rate / 100)), 0);
-  const total = subtotal + vat_total;
-  const id = invoiceData.id || `inv_${Date.now()}`;
-
-  const newInvoice: InvoiceWithItems = {
-    id,
-    number: `MOCK-${id.slice(-4)}`,
-    year: invoiceData.date.getFullYear(),
-    date: invoiceData.date.toISOString(),
-    client_id: invoiceData.client_id,
-    companyId: 'main-company',
-    subtotal,
-    vat_total,
-    total,
-    status: 'draft',
-    created_at: new Date().toISOString(),
-    items: invoiceData.items.map((item, i) => ({
-      ...item,
-      id: `item_${id}_${i}`,
-      invoiceId: id,
-      companyId: 'main-company',
-    })),
-  };
-  
-  console.log('Mock saving invoice:', newInvoice);
-  return newInvoice;
 }

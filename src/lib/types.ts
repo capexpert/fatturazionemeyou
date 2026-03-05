@@ -41,6 +41,7 @@ export type Invoice = {
   status: 'draft' | 'sent' | 'paid';
   xml_url?: string;
   pdf_url?: string;
+  xml_content?: string;
   created_at: string; // ISO 8601
   client?: Client; // Populated for display
 };

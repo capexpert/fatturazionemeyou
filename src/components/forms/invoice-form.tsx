@@ -3,7 +3,7 @@
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { InvoiceSchema, type InvoiceFormData } from '@/lib/schemas';
-import type { Client, InvoiceWithItems } from '@/lib/types';
+import type { Client, InvoiceWithItems, Company } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -29,16 +29,17 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { saveInvoiceAction } from '@/app/actions';
+import { generateInvoiceXMLAction } from '@/app/actions';
 import { cn, formatCurrency } from '@/lib/utils';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ClientForm } from './client-form';
 import { Separator } from '../ui/separator';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 type InvoiceFormProps = {
   invoice?: InvoiceWithItems;
@@ -47,14 +48,21 @@ type InvoiceFormProps = {
 
 export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const firestore = useFirestore();
+  const [isSaving, setIsSaving] = useState(false);
 
   const clientsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'clients'), where('companyId', '==', 'main-company'));
   }, [firestore]);
-
   const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
+  
+  const companyRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'company', 'main-company');
+  }, [firestore]);
+  const { data: company, isLoading: isLoadingCompany } = useDoc<Company>(companyRef);
 
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(InvoiceSchema),
@@ -118,24 +126,131 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   const handleClientCreated = (newClient: Client & { id: string }) => {
     form.setValue('client_id', newClient.id, { shouldValidate: true });
   };
+  
+  const handleSaveInvoice = async (data: InvoiceFormData) => {
+    if (!firestore || !company || !clients) {
+      toast({ variant: 'destructive', title: 'Errore', description: 'I servizi non sono pronti. Riprova tra poco.' });
+      return;
+    }
+    
+    setIsSaving(true);
+    
+    const client = clients.find(c => c.id === data.client_id);
+    if (!client) {
+      toast({ variant: 'destructive', title: 'Errore', description: 'Cliente non trovato.' });
+      setIsSaving(false);
+      return;
+    }
+
+    try {
+      const batch = writeBatch(firestore);
+      const isUpdate = !!data.id;
+      const invoiceId = data.id || doc(collection(firestore, 'invoices')).id;
+      const invoiceRef = doc(firestore, 'invoices', invoiceId);
+      
+      const invoiceData = {
+        id: invoiceId,
+        number: invoice?.number || nextInvoiceNumber,
+        year: data.date.getFullYear(),
+        date: data.date.toISOString(),
+        client_id: data.client_id,
+        companyId: 'main-company',
+        subtotal,
+        vat_total: vatTotal,
+        total: grandTotal,
+        status: invoice?.status || 'draft',
+        created_at: invoice?.created_at || new Date().toISOString(),
+      };
+      
+      batch.set(invoiceRef, invoiceData, { merge: true });
+      
+      data.items.forEach(item => {
+        const itemId = item.id.startsWith('item_') ? item.id : doc(collection(firestore, 'invoiceItems')).id;
+        const itemRef = doc(firestore, 'invoiceItems', itemId);
+        batch.set(itemRef, {
+          id: itemId,
+          invoiceId: invoiceId,
+          companyId: 'main-company',
+          title: item.title,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          vat_rate: item.vat_rate,
+        });
+      });
+
+      await batch.commit();
+      
+      toast({ title: 'Successo!', description: 'Fattura salvata nel database.' });
+
+      // Now, generate and save the XML
+      const xmlInput = {
+        company: {
+          company_name: company.company_name,
+          vat_number: company.vat_number,
+          tax_code: company.tax_code,
+          address: company.address,
+          city: company.city,
+          province: company.province,
+          zip: company.zip,
+          country: company.country,
+          pec_email: company.pec_email,
+          iban: company.iban,
+          regime_fiscale: company.regime_fiscale,
+        },
+        client: {
+            name: client.name,
+            vat_number: client.vat_number,
+            tax_code: client.tax_code,
+            address: client.address,
+            city: client.city,
+            province: client.province,
+            zip: client.zip,
+            country: client.country,
+            pec: client.pec,
+            sdi_code: client.sdi_code,
+        },
+        invoice: {
+            number: invoiceData.number,
+            date: format(data.date, 'yyyy-MM-dd'),
+            subtotal,
+            vat_total: vatTotal,
+            total: grandTotal,
+            currency: 'EUR',
+        },
+        invoice_items: data.items.map((item) => ({
+            title: item.title,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            vat_rate: item.vat_rate,
+            line_total: item.quantity * item.unit_price,
+        })),
+      };
+
+      const result = await generateInvoiceXMLAction(xmlInput);
+
+      if (result.xml) {
+        await updateDoc(invoiceRef, { xml_content: result.xml, status: 'sent' });
+        toast({ title: 'Successo!', description: 'File XML generato e salvato.' });
+      } else {
+        throw new Error(result.message || 'Errore sconosciuto durante la generazione XML.');
+      }
+      
+      router.push('/invoices');
+
+    } catch (error) {
+      console.error("Error saving invoice:", error);
+      toast({ variant: 'destructive', title: 'Errore nel salvataggio', description: (error as Error).message });
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
 
   return (
     <Form {...form}>
-      <form action={async (formData) => {
-          const data = Object.fromEntries(formData.entries());
-          const items = JSON.parse(data.items as string);
-          const date = new Date(data.date as string);
-          const client_id = data.client_id as string;
-          const id = data.id as string | undefined;
-          
-          await form.handleSubmit(async () => {
-             await saveInvoiceAction({id, client_id, date, items})
-          })();
-      }}>
-       <input type="hidden" name="items" value={JSON.stringify(watchedItems)} />
-       {invoice?.id && <input type="hidden" name="id" value={invoice.id} />}
-
+      <form onSubmit={form.handleSubmit(handleSaveInvoice)} className="space-y-8">
         <div className="space-y-8">
             <Card>
                 <CardHeader>
@@ -190,7 +305,6 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Data Fattura</FormLabel>
-                        <input type="hidden" name={field.name} value={field.value.toISOString()} />
                         <Popover>
                             <PopoverTrigger asChild>
                             <FormControl>
@@ -330,31 +444,28 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
                                 <FormItem>
                                     <FormLabel>Totale Lordo</FormLabel>
                                     <FormControl>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            placeholder="0.00"
-                                            value={grossTotal > 0 ? (Math.round(grossTotal * 100) / 100) : ''}
-                                            onChange={(e) => {
-                                                if (e.target.value === '') {
-                                                    form.setValue(`items.${index}.unit_price`, 0, { shouldValidate: true, shouldDirty: true });
-                                                    return;
-                                                }
-                                                // Handle comma as decimal separator
-                                                const grossTotalValue = parseFloat(e.target.value.replace(',', '.'));
-                                                const item = form.getValues(`items.${index}`);
-                                                const quantity = item.quantity || 1;
-                                                const vatRate = item.vat_rate || 0;
+                                    <Input
+                                        type="text"
+                                        placeholder="0.00"
+                                        value={watchedItems[index].unit_price > 0 ? (Math.round(grossTotal * 100) / 100).toFixed(2).replace('.', ',') : ''}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(',', '.');
+                                            if (value === '' || isNaN(parseFloat(value))) {
+                                                form.setValue(`items.${index}.unit_price`, 0, { shouldValidate: true, shouldDirty: true });
+                                                return;
+                                            }
+                                            
+                                            const grossTotalValue = parseFloat(value);
+                                            const item = form.getValues(`items.${index}`);
+                                            const quantity = item.quantity || 1;
+                                            const vatRate = item.vat_rate || 0;
 
-                                                if (!isNaN(grossTotalValue) && quantity > 0) {
-                                                    const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
-                                                    const currentUnitPrice = item.unit_price || 0;
-                                                    if (Math.abs(currentUnitPrice - newUnitPrice) > 0.0001) {
-                                                      form.setValue(`items.${index}.unit_price`, newUnitPrice, { shouldValidate: true, shouldDirty: true });
-                                                    }
-                                                }
-                                            }}
-                                        />
+                                            if (!isNaN(grossTotalValue) && quantity > 0) {
+                                                const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
+                                                form.setValue(`items.${index}.unit_price`, newUnitPrice, { shouldValidate: true, shouldDirty: true });
+                                            }
+                                        }}
+                                    />
                                     </FormControl>
                                 </FormItem>
                             </div>
@@ -373,35 +484,34 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
                 </Button>
                 </CardContent>
             </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Riepilogo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Imponibile</span>
-                            <span className="font-medium">{formatCurrency(subtotal)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">IVA</span>
-                            <span className="font-medium">{formatCurrency(vatTotal)}</span>
-                        </div>
-                        <Separator className="my-2" />
-                        <div className="flex justify-between text-lg font-bold">
-                            <span>Totale</span>
-                            <span>{formatCurrency(grandTotal)}</span>
-                        </div>
-                    </div>
-                </CardContent>
-                <CardFooter className="justify-end">
-                    <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva Fattura')}
-                    </Button>
-                </CardFooter>
-            </Card>
         </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Riepilogo</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Imponibile</span>
+                        <span className="font-medium">{formatCurrency(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">IVA</span>
+                        <span className="font-medium">{formatCurrency(vatTotal)}</span>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="flex justify-between text-lg font-bold">
+                        <span>Totale</span>
+                        <span>{formatCurrency(grandTotal)}</span>
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter className="justify-end">
+                <Button type="submit" className="w-full sm:w-auto" disabled={isSaving}>
+                    {isSaving ? 'Salvataggio...' : (invoice ? 'Aggiorna Fattura' : 'Salva Fattura')}
+                </Button>
+            </CardFooter>
+        </Card>
       </form>
     </Form>
   );

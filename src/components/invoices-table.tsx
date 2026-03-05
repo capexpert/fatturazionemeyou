@@ -1,3 +1,4 @@
+'use client';
 import Link from "next/link";
 import {
   Table,
@@ -17,9 +18,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Download, Edit, Copy } from "lucide-react";
-import { getInvoices } from "@/lib/data";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy, where } from "firebase/firestore";
+import type { Client, Invoice } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { format } from 'date-fns';
+import { useMemo } from "react";
+import { Skeleton } from "./ui/skeleton";
 
 const statusVariant = {
     paid: 'default',
@@ -27,8 +32,61 @@ const statusVariant = {
     draft: 'outline',
 } as const;
 
-export async function InvoicesTable() {
-    const invoices = await getInvoices();
+function downloadXml(xmlContent: string, fileName: string) {
+    const blob = new Blob([xmlContent], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+export function InvoicesTable() {
+    const firestore = useFirestore();
+
+    const invoicesQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(
+          collection(firestore, 'invoices'), 
+          where('companyId', '==', 'main-company'), 
+          orderBy('date', 'desc')
+        );
+    }, [firestore]);
+    const { data: invoices, isLoading: isLoadingInvoices } = useCollection<Invoice>(invoicesQuery);
+
+    const clientsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'clients'), where('companyId', '==', 'main-company'));
+    }, [firestore]);
+    const { data: clients, isLoading: isLoadingClients } = useCollection<Client>(clientsQuery);
+    
+    const invoicesWithClients = useMemo(() => {
+      if (!invoices || !clients) return [];
+      const clientMap = new Map(clients.map(c => [c.id, c.name]));
+      return invoices.map(inv => ({
+        ...inv,
+        client: { name: clientMap.get(inv.client_id) || 'Cliente non trovato' }
+      }));
+    }, [invoices, clients]);
+
+    const isLoading = isLoadingInvoices || isLoadingClients;
+
+    if (isLoading) {
+      return (
+          <Card>
+              <CardContent className="p-0">
+                <div className="p-4 space-y-2">
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                </div>
+              </CardContent>
+          </Card>
+      );
+    }
 
     return (
         <Card>
@@ -45,14 +103,14 @@ export async function InvoicesTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((invoice) => (
+                {invoicesWithClients.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.number}</TableCell>
                     <TableCell>{invoice.client?.name}</TableCell>
                     <TableCell>{format(new Date(invoice.date), 'dd/MM/yyyy')}</TableCell>
                     <TableCell>{formatCurrency(invoice.total)}</TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
+                      <Badge variant={invoice.status ? statusVariant[invoice.status] : 'outline'}>{invoice.status}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -62,11 +120,14 @@ export async function InvoicesTable() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem 
+                            disabled={!invoice.xml_content}
+                            onClick={() => downloadXml(invoice.xml_content!, `Fattura_${invoice.number.replace('/', '-')}.xml`)}
+                          >
                             <Download className="mr-2 h-4 w-4" />
                             Scarica XML
                           </DropdownMenuItem>
-                           <DropdownMenuItem>
+                           <DropdownMenuItem disabled>
                             <Download className="mr-2 h-4 w-4" />
                             Scarica PDF
                           </DropdownMenuItem>
@@ -76,7 +137,7 @@ export async function InvoicesTable() {
                                 Modifica
                             </Link>
                           </DropdownMenuItem>
-                           <DropdownMenuItem>
+                           <DropdownMenuItem disabled>
                             <Copy className="mr-2 h-4 w-4" />
                             Duplica
                           </DropdownMenuItem>
