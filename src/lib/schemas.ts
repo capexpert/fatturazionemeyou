@@ -39,7 +39,15 @@ export const InvoiceItemSchema = z.object({
   description: z.string().min(1, "La descrizione è obbligatoria."),
   quantity: z.number().min(0.01, "La quantità deve essere maggiore di 0."),
   unit_price: z.number().min(0, "Il prezzo unitario non può essere negativo."),
-  vat_rate: z.enum(['4', '5', '10', '22']).transform(v => Number(v)),
+  vat_rate: z.preprocess(
+    (val) => Number(val),
+    z.union([
+      z.literal(4),
+      z.literal(5),
+      z.literal(10),
+      z.literal(22),
+    ], { errorMap: () => ({ message: "L'aliquota IVA non è valida." }) })
+  ),
 });
 
 export const InvoiceSchema = z.object({
