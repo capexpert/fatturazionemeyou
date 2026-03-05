@@ -73,7 +73,7 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
           id: invoice.id,
           client_id: invoice.client_id,
           date: new Date(invoice.date),
-          items: invoice.items.map(item => ({
+          items: (invoice.items || []).map(item => ({
             ...item,
             vat_rate: item.vat_rate as 4 | 5 | 10 | 22
           })),
