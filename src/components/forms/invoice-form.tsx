@@ -226,17 +226,22 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[30%]">Title</TableHead>
-                      <TableHead className="w-[40%]">Description</TableHead>
+                      <TableHead className="w-[25%]">Title</TableHead>
+                      <TableHead className="w-[30%]">Description</TableHead>
                       <TableHead>Qty</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>VAT</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-right">Net Total</TableHead>
+                      <TableHead className="text-right">Gross Total</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fields.map((field, index) => (
+                    {fields.map((field, index) => {
+                      const netTotal = (watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unit_price || 0);
+                      const grossTotal = netTotal * (1 + (watchedItems[index]?.vat_rate || 0) / 100);
+
+                      return (
                       <TableRow key={field.id}>
                         <TableCell>
                           <FormField
@@ -263,7 +268,7 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                            <FormField
                             control={form.control}
                             name={`items.${index}.unit_price`}
-                            render={({ field }) => <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />}
+                            render={({ field }) => <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />}
                           />
                         </TableCell>
                         <TableCell>
@@ -281,13 +286,35 @@ export function InvoiceForm({ clients, invoice, nextInvoiceNumber }: InvoiceForm
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                            {formatCurrency((watchedItems[index]?.quantity || 0) * (watchedItems[index]?.unit_price || 0))}
+                            {formatCurrency(netTotal)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={grossTotal > 0 ? grossTotal.toFixed(2) : ''}
+                              onChange={(e) => {
+                                  const grossTotalValue = parseFloat(e.target.value);
+                                  const item = form.getValues(`items.${index}`);
+                                  const quantity = item.quantity || 1;
+                                  const vatRate = item.vat_rate || 0;
+
+                                  if (!isNaN(grossTotalValue) && quantity > 0) {
+                                      const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
+                                      const currentUnitPrice = item.unit_price || 0;
+                                      if (Math.abs(currentUnitPrice - newUnitPrice) > 0.0001) {
+                                        form.setValue(`items.${index}.unit_price`, newUnitPrice, { shouldValidate: true, shouldDirty: true });
+                                      }
+                                  }
+                              }}
+                          />
                         </TableCell>
                         <TableCell>
                           {fields.length > 1 && <Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button>}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )})}
                   </TableBody>
                 </Table>
                 <Button
