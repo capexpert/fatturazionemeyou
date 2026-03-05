@@ -1,4 +1,4 @@
-import type { Company, Client, Invoice, InvoiceWithItems } from '@/lib/types';
+import type { Company, Client, Invoice, InvoiceWithItems, InvoiceItem } from '@/lib/types';
 
 // This file previously contained mock data. It is now being replaced by
 // real-time data fetching from Firestore in the components themselves.
@@ -38,4 +38,36 @@ export async function getNextInvoiceNumber(year: number): Promise<string> {
     await delay(50);
     // This logic will be moved to a client-side hook
     return `1/${year}`;
+}
+
+export async function saveInvoice(invoiceData: { id?: string, client_id: string, date: Date, items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'companyId'>[] }): Promise<InvoiceWithItems> {
+  await delay(100);
+  
+  const subtotal = invoiceData.items.reduce((acc, item) => acc + item.quantity * item.unit_price, 0);
+  const vat_total = invoiceData.items.reduce((acc, item) => acc + (item.quantity * item.unit_price * (item.vat_rate / 100)), 0);
+  const total = subtotal + vat_total;
+  const id = invoiceData.id || `inv_${Date.now()}`;
+
+  const newInvoice: InvoiceWithItems = {
+    id,
+    number: `MOCK-${id.slice(-4)}`,
+    year: invoiceData.date.getFullYear(),
+    date: invoiceData.date.toISOString(),
+    client_id: invoiceData.client_id,
+    companyId: 'main-company',
+    subtotal,
+    vat_total,
+    total,
+    status: 'draft',
+    created_at: new Date().toISOString(),
+    items: invoiceData.items.map((item, i) => ({
+      ...item,
+      id: `item_${id}_${i}`,
+      invoiceId: id,
+      companyId: 'main-company',
+    })),
+  };
+  
+  console.log('Mock saving invoice:', newInvoice);
+  return newInvoice;
 }
