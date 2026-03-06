@@ -3,8 +3,8 @@ import {
   SidebarProvider,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/app-sidebar';
-import { useUser, useAuth, initiateAnonymousSignIn } from '@/firebase';
+import { AppSidebar } from '@/app/(app)/app-sidebar';
+import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,16 +16,13 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      // For this demo, we'll just sign in the user anonymously.
-      // In a real app, you'd redirect to a login page.
-      initiateAnonymousSignIn(auth);
+      router.push('/login');
     }
-  }, [isUserLoading, user, router, auth]);
+  }, [isUserLoading, user, router]);
 
   if (isUserLoading || !user) {
     return (
