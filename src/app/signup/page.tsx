@@ -85,8 +85,8 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 bg-[#2E4BF2]">
-      <div className="flex flex-col items-center justify-center gap-8 py-12 px-4">
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#2E4BF2] p-4">
+      <div className="flex flex-col items-center gap-8">
         <Logo className="w-48 text-white" />
         <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow-lg">
             <div className="grid gap-6">
@@ -138,7 +138,6 @@ export default function SignupPage() {
             </div>
         </div>
       </div>
-      <div className="hidden lg:block" />
     </div>
   );
 }
