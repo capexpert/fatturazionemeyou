@@ -7,7 +7,7 @@ service cloud.firestore {
     // An admin is defined by the existence of a document in the 'roles_admin'
     // collection where the document ID is the user's UID.
     function isAdmin() {
-      return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return request.auth != null && get(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) != null;
     }
 
     // This rule is necessary for the isAdmin() function to work. It allows any
