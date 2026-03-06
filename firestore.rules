@@ -5,8 +5,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
+      // Using get() instead of exists() as a more robust way to check for the document.
       return request.auth != null && 
-        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+        get(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) != null;
     }
 
     match /roles_admin/{userId} {
@@ -17,7 +18,7 @@ service cloud.firestore {
     match /company/{companyId} {
       allow read, write: if isAdmin();
     }
-
+    
     match /clients/{clientId} {
       allow read, write, delete: if isAdmin();
     }
