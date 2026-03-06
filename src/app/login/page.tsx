@@ -83,58 +83,60 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-      <div className="flex flex-col items-center justify-center gap-6 py-12">
-        <Logo className="w-32" />
-        <div className="mx-auto grid w-[350px] gap-6">
-          <div className="grid gap-2 text-center">
-            <h1 className="text-3xl font-bold">Accedi</h1>
-            <p className="text-balance text-muted-foreground">
-              Inserisci le tue credenziali per entrare.
-            </p>
-          </div>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="tua@email.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Accesso...' : 'Accedi'}
-              </Button>
-            </form>
-          </Form>
-          <div className="mt-4 text-center text-sm">
-            Non hai un account?{' '}
-            <Link href="/signup" className="underline">
-              Registrati
-            </Link>
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 bg-[#2E4BF2]">
+      <div className="flex flex-col items-center justify-center gap-8 py-12 px-4">
+        <Logo className="w-48 text-white" />
+        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow-lg">
+          <div className="grid gap-6">
+            <div className="grid gap-2 text-center">
+              <h1 className="text-3xl font-bold">Accedi</h1>
+              <p className="text-balance text-muted-foreground">
+                Inserisci le tue credenziali per entrare.
+              </p>
+            </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="tua@email.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="********" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? 'Accesso...' : 'Accedi'}
+                </Button>
+              </form>
+            </Form>
+            <div className="mt-4 text-center text-sm">
+              Non hai un account?{' '}
+              <Link href="/signup" className="underline">
+                Registrati
+              </Link>
+            </div>
           </div>
         </div>
       </div>
-      <div className="hidden bg-muted lg:block" />
+      <div className="hidden lg:block" />
     </div>
   );
 }
