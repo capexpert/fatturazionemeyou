@@ -465,19 +465,19 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
                                 <FormLabel>Totale Lordo</FormLabel>
                                 <FormControl>
                                 <Input
-                                    type="text"
-                                    placeholder="0,00"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
                                     value={
                                         watchedItems[index]?.unit_price > 0
                                         ? (
                                             (watchedItems[index].quantity * watchedItems[index].unit_price) *
                                             (1 + watchedItems[index].vat_rate / 100)
-                                            ).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                            ).toFixed(2)
                                         : ''
                                     }
                                     onChange={(e) => {
-                                        const value = e.target.value.replace(/\./g, '').replace(',', '.');
-                                        const grossTotalValue = parseFloat(value);
+                                        const grossTotalValue = parseFloat(e.target.value);
                                         
                                         if (isNaN(grossTotalValue)) {
                                             form.setValue(`items.${index}.unit_price`, 0, { shouldValidate: true, shouldDirty: true });
