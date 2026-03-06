@@ -199,7 +199,7 @@ export function InvoiceDocument({ invoice, company, client }: InvoiceDocumentPro
                 </View>
                 
                 <Text style={styles.footer}>
-                    Fattura generata con FatturaNow - Documento senza valore fiscale se non seguito da Fattura Elettronica.
+                    Fattura generata con MEYOU fatturazione - Documento senza valore fiscale se non seguito da Fattura Elettronica.
                 </Text>
             </Page>
         </Document>
