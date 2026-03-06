@@ -470,16 +470,13 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
                                     placeholder="0.00"
                                     value={
                                         watchedItems[index]?.unit_price > 0
-                                        ? (
-                                            (watchedItems[index].quantity * watchedItems[index].unit_price) *
-                                            (1 + watchedItems[index].vat_rate / 100)
-                                            ).toFixed(2)
+                                        ? ((watchedItems[index].quantity * watchedItems[index].unit_price) * (1 + watchedItems[index].vat_rate / 100))
                                         : ''
                                     }
                                     onChange={(e) => {
                                         const grossTotalValue = parseFloat(e.target.value);
                                         
-                                        if (isNaN(grossTotalValue)) {
+                                        if (e.target.value === '' || isNaN(grossTotalValue)) {
                                             form.setValue(`items.${index}.unit_price`, 0, { shouldValidate: true, shouldDirty: true });
                                             return;
                                         }
@@ -490,7 +487,7 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
 
                                         if (quantity > 0) {
                                             const newUnitPrice = (grossTotalValue / (1 + vatRate / 100)) / quantity;
-                                            form.setValue(`items.${index}.unit_price`, parseFloat(newUnitPrice.toFixed(2)), { shouldValidate: true, shouldDirty: true });
+                                            form.setValue(`items.${index}.unit_price`, newUnitPrice, { shouldValidate: true, shouldDirty: true });
                                         }
                                     }}
                                 />
