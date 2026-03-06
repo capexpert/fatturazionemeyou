@@ -50,6 +50,6 @@ export type Invoice = {
   status: 'draft' | 'sent' | 'paid';
   xml_content?: string;
   created_at: string; // ISO 8601
-  items: InvoiceItem[];
+  items?: InvoiceItem[];
   client?: Client | null; // Populated for display
 };

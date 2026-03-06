@@ -3,7 +3,7 @@
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { InvoiceSchema, type InvoiceFormData } from '@/lib/schemas';
-import type { Client, Invoice, Company, InvoiceItem } from '@/lib/types';
+import type { Client, Invoice, Company } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -66,6 +66,17 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
   }, [firestore]);
   const { data: company, isLoading: isLoadingCompany } = useDoc<Company>(companyRef);
 
+  const getInitialItems = () => {
+    if (invoice?.items && invoice.items.length > 0) {
+      return invoice.items.map(item => ({
+        ...item,
+        vat_rate: item.vat_rate as 4 | 5 | 10 | 22,
+      }));
+    }
+    // For new invoices OR old invoices without embedded items, start with one blank item.
+    return [{ id: '', title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 }];
+  };
+
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(InvoiceSchema),
     defaultValues: invoice
@@ -73,17 +84,12 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
           id: invoice.id,
           client_id: invoice.client_id,
           date: new Date(invoice.date),
-          items: (invoice.items || []).map(item => ({
-            ...item,
-            vat_rate: item.vat_rate as 4 | 5 | 10 | 22
-          })),
+          items: getInitialItems(),
         }
       : {
           client_id: '',
           date: new Date(),
-          items: [
-            { id: '', title: '', description: '', quantity: 1, unit_price: 0, vat_rate: 22 },
-          ],
+          items: getInitialItems(),
         },
   });
 
