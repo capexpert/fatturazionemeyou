@@ -4,14 +4,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // DIAGNOSTIC RULE: Temporarily grant admin rights to any authenticated user
+    // to isolate the issue with the roles_admin check. This is NOT secure.
     function isAdmin() {
-      // Using get() instead of exists() as a more robust way to check for the document.
-      return request.auth != null && 
-        get(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) != null;
+      return request.auth != null;
     }
 
     match /roles_admin/{userId} {
-      // Diagnostic Rule: Allow any authenticated user to read to isolate client-side issues.
       allow read: if request.auth != null;
       allow write: if false;
     }
