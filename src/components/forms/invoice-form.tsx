@@ -470,7 +470,12 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
                                     placeholder="0.00"
                                     value={
                                         watchedItems[index]?.unit_price > 0
-                                        ? ((watchedItems[index].quantity * watchedItems[index].unit_price) * (1 + watchedItems[index].vat_rate / 100))
+                                        ? parseFloat(
+                                            (
+                                                (watchedItems[index].quantity * watchedItems[index].unit_price) *
+                                                (1 + watchedItems[index].vat_rate / 100)
+                                            ).toFixed(2)
+                                            )
                                         : ''
                                     }
                                     onChange={(e) => {
