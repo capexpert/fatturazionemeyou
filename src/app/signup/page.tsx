@@ -77,13 +77,13 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-xs">
-        <CardHeader className="text-center p-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center p-6">
           <Logo className="mx-auto mb-4 w-24" />
           <CardTitle>Crea un Account</CardTitle>
           <CardDescription>Inserisci i tuoi dati per registrarti.</CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
+        <CardContent className="p-6 pt-0">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -117,7 +117,7 @@ export default function SignupPage() {
               </Button>
             </form>
           </Form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Hai già un account?{' '}
             <Link href="/login" className="font-medium text-primary hover:underline">
               Accedi

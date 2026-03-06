@@ -75,13 +75,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-xs">
-        <CardHeader className="text-center p-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center p-6">
           <Logo className="mx-auto mb-4 w-24" />
           <CardTitle>Accedi</CardTitle>
           <CardDescription>Inserisci le tue credenziali per entrare.</CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
+        <CardContent className="p-6 pt-0">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -115,7 +115,7 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Non hai un account?{' '}
             <Link href="/signup" className="font-medium text-primary hover:underline">
               Registrati
