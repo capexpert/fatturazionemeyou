@@ -76,7 +76,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center p-4">
           <Logo className="mx-auto mb-4 w-24" />
           <CardTitle>Accedi</CardTitle>
           <CardDescription>Inserisci le tue credenziali per entrare.</CardDescription>
