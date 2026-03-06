@@ -56,8 +56,24 @@ export default function SignupPage() {
       return;
     }
     try {
+        // Crea l'utente
         await createUserWithEmailAndPassword(auth, data.email, data.password);
-        // The useEffect will handle redirection
+        
+        // Disconnetti immediatamente il nuovo utente.
+        if (auth.currentUser) {
+          await auth.signOut();
+        }
+
+        // Informa l'utente su cosa fare dopo.
+        toast({
+            title: 'Registrazione completata',
+            description: "Il tuo account è stato creato. Contatta un amministratore per ottenere l'accesso.",
+            duration: 5000,
+        });
+
+        // Reindirizza alla pagina di login
+        router.push('/login');
+
     } catch (error: any) {
         let description = "Si è verificato un errore inaspettato.";
         if (error.code === 'auth/email-already-in-use') {

@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { useEffect, useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const LoginSchema = z.object({
   email: z.string().email('Indirizzo email non valido.'),
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,18 +46,34 @@ export default function LoginPage() {
 
   async function onSubmit(data: LoginFormData) {
     setIsSubmitting(true);
-    if (!auth) {
+    if (!auth || !firestore) {
       toast({
         variant: "destructive",
         title: "Errore",
-        description: "Servizio di autenticazione non disponibile.",
+        description: "Servizi di autenticazione o database non disponibili.",
       });
       setIsSubmitting(false);
       return;
     }
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      // The useEffect will handle redirection
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      // Controlla se l'utente è un amministratore
+      const adminDocRef = doc(firestore, 'roles_admin', user.uid);
+      const adminDocSnap = await getDoc(adminDocRef);
+
+      if (!adminDocSnap.exists()) {
+        // Non è un amministratore. Disconnettilo e mostra un errore.
+        await auth.signOut();
+        toast({
+          variant: 'destructive',
+          title: 'Accesso Negato',
+          description: 'Non disponi dei permessi di amministratore per accedere.',
+        });
+      }
+      // Se l'utente è un admin, l'useEffect esistente gestirà il reindirizzamento al /dashboard
+
     } catch (error: any) {
       let description = "Si è verificato un errore inaspettato.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
