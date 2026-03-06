@@ -39,7 +39,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center justify-center">
-          <Logo className="h-10 w-auto" />
+          <Logo className="h-8 w-auto" />
         </div>
       </SidebarHeader>
       <SidebarMenu>
