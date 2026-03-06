@@ -5,7 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
@@ -29,6 +32,8 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
+  const [loginError, setLoginError] = useState<{ title: string; description: string; uid?: string } | null>(null);
+
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(LoginSchema),
@@ -52,18 +57,16 @@ export default function LoginPage() {
             router.replace('/dashboard');
           } else {
             await auth.signOut();
-            toast({
-              variant: 'destructive',
-              title: 'Accesso Negato',
-              description: `Il tuo account non ha i permessi di amministratore. Controlla che il documento con questo UID esista nella collezione 'roles_admin': ${user.uid}`,
-              duration: 9000,
+            setLoginError({
+                title: 'Accesso Negato',
+                description: "Il tuo account non ha i permessi di amministratore. Per risolvere, crea un documento nella collezione 'roles_admin' in Firestore usando l'UID sottostante come ID del documento.",
+                uid: user.uid
             });
             setIsVerifying(false);
           }
         } catch (error) {
            await auth.signOut();
-           toast({
-              variant: 'destructive',
+           setLoginError({
               title: 'Errore di Permessi',
               description: 'Impossibile verificare il ruolo di amministratore. Controlla le regole di sicurezza o contatta il supporto.',
            });
@@ -75,10 +78,11 @@ export default function LoginPage() {
     };
 
     verifyUser();
-  }, [user, isUserLoading, firestore, auth, router, toast]);
+  }, [user, isUserLoading, firestore, auth, router]);
 
   async function onSubmit(data: LoginFormData) {
     setIsSubmitting(true);
+    setLoginError(null);
     if (!auth || !firestore) {
       toast({
         variant: "destructive",
@@ -99,11 +103,10 @@ export default function LoginPage() {
         setIsVerifying(true); // This will trigger the useEffect to redirect
       } else {
         await auth.signOut();
-        toast({
-          variant: 'destructive',
-          title: 'Accesso Negato',
-          description: `Il tuo account non ha i permessi di amministratore. Controlla che il documento con questo UID esista nella collezione 'roles_admin': ${loggedInUser.uid}`,
-          duration: 9000,
+        setLoginError({
+            title: 'Accesso Negato',
+            description: "Il tuo account non ha i permessi di amministratore. Per risolvere, crea un documento nella collezione 'roles_admin' in Firestore usando l'UID sottostante come ID del documento.",
+            uid: loggedInUser.uid
         });
       }
 
@@ -112,11 +115,7 @@ export default function LoginPage() {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         description = "Credenziali non valide. Riprova.";
       }
-      toast({
-        variant: 'destructive',
-        title: 'Errore di accesso',
-        description,
-      });
+      setLoginError({ title: 'Errore di accesso', description });
     } finally {
       setIsSubmitting(false);
     }
@@ -145,6 +144,23 @@ export default function LoginPage() {
                 Inserisci le tue credenziali per entrare.
               </p>
             </div>
+            
+            {loginError && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>{loginError.title}</AlertTitle>
+                    <AlertDescription>
+                        {loginError.description}
+                        {loginError.uid && (
+                            <div className="mt-4">
+                                <Label htmlFor="uid-error">UID Account per l'accesso:</Label>
+                                <Input id="uid-error" readOnly value={loginError.uid} className="mt-1 font-mono" onClick={(e) => e.currentTarget.select()} />
+                            </div>
+                        )}
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
                 <FormField

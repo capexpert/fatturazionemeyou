@@ -62,8 +62,8 @@ export default function SignupPage() {
 
         // Informa l'utente su cosa fare dopo.
         toast({
-            title: 'Registrazione completata',
-            description: `Il tuo account è stato creato (UID: ${newUser.uid}). Contatta un amministratore per ottenere l'accesso.`,
+            title: 'Registrazione Completata',
+            description: `Il tuo account è stato creato. Contatta un amministratore per ottenere l'accesso, fornendo questo UID: ${newUser.uid}`,
             duration: 9000,
         });
         
@@ -110,42 +110,9 @@ export default function SignupPage() {
                 <div className="grid gap-2 text-center">
                     <h1 className="text-3xl font-bold">Crea un Account</h1>
                     <p className="text-balance text-muted-foreground">
-                    Inserisci i tuoi dati per registrarti.
+                    L'accesso è solo su invito.
                     </p>
                 </div>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-                    <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                            <Input type="email" placeholder="tua@email.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                            <Input type="password" placeholder="********" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                        {isSubmitting ? 'Registrazione...' : 'Registrati'}
-                    </Button>
-                    </form>
-                </Form>
                 <div className="mt-4 text-center text-sm">
                     Hai già un account?{' '}
                     <Link href="/login" className="underline">
