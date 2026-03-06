@@ -24,7 +24,7 @@ export default function EditInvoicePage() {
 
   const { data: invoice, isLoading, error } = useDoc<Invoice>(invoiceRef);
 
-  if (isLoading || !id) {
+  if (isLoading) {
     return (
       <>
         <PageHeader title="Modifica Fattura" />
@@ -52,23 +52,9 @@ export default function EditInvoicePage() {
     );
   }
 
-  // Only call notFound if loading is complete, there's no error, and the document is confirmed to not exist.
-  if (!isLoading && !error && !invoice) {
-    notFound();
-  }
-
-  // Render a skeleton if the invoice is not yet available, even if loading is false,
-  // to handle the brief moment before notFound is called.
+  // If loading is finished, there's no error, but the document is null, then it's a 404.
   if (!invoice) {
-    return (
-      <>
-        <PageHeader title="Modifica Fattura" />
-        <div className="space-y-8">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-[400px] w-full" />
-        </div>
-      </>
-    )
+    notFound();
   }
 
   return (
