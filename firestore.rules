@@ -10,18 +10,10 @@ service cloud.firestore {
       return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // Helper function to check if any admins have been configured yet.
-    function noAdminsConfigured() {
-      return get(/databases/$(database)/documents/roles_admin).size() == 0;
-    }
-
     // Secure all collections.
-    // Allow access if the user is an admin.
-    // OR, if no admins have been configured yet, allow any authenticated user access.
-    // This allows the first user(s) to use the app and configure the first admin.
-    // Once the first admin document is created in 'roles_admin', this rule becomes strict.
+    // Allow access only if the user is an admin.
     match /{document=**} {
-      allow read, write: if request.auth != null && (isAdmin() || noAdminsConfigured());
+      allow read, write: if isAdmin();
     }
   }
 }
