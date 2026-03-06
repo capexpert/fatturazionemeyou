@@ -29,6 +29,7 @@ export default function LoginPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(LoginSchema),
@@ -39,10 +40,42 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-      router.replace('/dashboard');
+    if (isUserLoading || !firestore || !auth) {
+      return;
     }
-  }, [user, isUserLoading, router]);
+
+    const verifyUser = async () => {
+      if (user) {
+        const adminDocRef = doc(firestore, 'roles_admin', user.uid);
+        try {
+          const adminDocSnap = await getDoc(adminDocRef);
+          if (adminDocSnap.exists()) {
+            router.replace('/dashboard');
+          } else {
+            await auth.signOut();
+            toast({
+              variant: 'destructive',
+              title: 'Accesso Negato',
+              description: 'Il tuo account non ha i permessi di amministratore.',
+            });
+            setIsVerifying(false);
+          }
+        } catch (error) {
+           await auth.signOut();
+           toast({
+              variant: 'destructive',
+              title: 'Errore di Permessi',
+              description: 'Impossibile verificare il ruolo di amministratore. Controlla le regole di sicurezza o contatta il supporto.',
+           });
+           setIsVerifying(false);
+        }
+      } else {
+        setIsVerifying(false);
+      }
+    };
+
+    verifyUser();
+  }, [user, isUserLoading, firestore, auth, router, toast]);
 
   async function onSubmit(data: LoginFormData) {
     setIsSubmitting(true);
@@ -57,14 +90,14 @@ export default function LoginPage() {
     }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
+      const loggedInUser = userCredential.user;
 
-      // Controlla se l'utente è un amministratore
-      const adminDocRef = doc(firestore, 'roles_admin', user.uid);
+      const adminDocRef = doc(firestore, 'roles_admin', loggedInUser.uid);
       const adminDocSnap = await getDoc(adminDocRef);
 
-      if (!adminDocSnap.exists()) {
-        // Non è un amministratore. Disconnettilo e mostra un errore.
+      if (adminDocSnap.exists()) {
+        setIsVerifying(true);
+      } else {
         await auth.signOut();
         toast({
           variant: 'destructive',
@@ -72,7 +105,6 @@ export default function LoginPage() {
           description: 'Non disponi dei permessi di amministratore per accedere.',
         });
       }
-      // Se l'utente è un admin, l'useEffect esistente gestirà il reindirizzamento al /dashboard
 
     } catch (error: any) {
       let description = "Si è verificato un errore inaspettato.";
@@ -89,12 +121,12 @@ export default function LoginPage() {
     }
   }
 
-  if (isUserLoading || (!isUserLoading && user)) {
+  if (isVerifying) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4 p-4">
             <Logo className="w-24" />
-            <p className="text-muted-foreground">Caricamento...</p>
+            <p className="text-muted-foreground">Verifica in corso...</p>
         </div>
       </div>
     );

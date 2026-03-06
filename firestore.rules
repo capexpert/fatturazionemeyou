@@ -5,12 +5,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    match /roles_admin/{uid} {
-      allow get: if request.auth.uid == uid;
-      allow list, write, update, delete, create: if false;
+    match /roles_admin/{userId} {
+      allow get: if request.auth != null && request.auth.uid == userId;
+      allow list, write, update, delete: if false;
     }
 
     match /company/{companyId} {
@@ -18,14 +19,14 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow get, create, update, delete: if isAdmin();
+      allow read, write, delete: if isAdmin();
     }
     match /clients {
       allow list: if isAdmin();
     }
 
     match /invoices/{invoiceId} {
-      allow get, create, update, delete: if isAdmin();
+      allow read, write, delete: if isAdmin();
     }
     match /invoices {
       allow list: if isAdmin();
