@@ -116,7 +116,7 @@ Guidelines:
 6.  For each item in 'invoice_items', create a <DettaglioLinee> block.
 7.  Inside each <DettaglioLinee>, create the <Descrizione> tag by combining the 'title' and 'description' fields in the format: "title - description".
 8.  Use the pre-calculated VAT summary from 'dati_riepilogo' to create the <DatiRiepilogo> block. For each item in the summary, create a block with <AliquotaIVA>, <ImponibileImporto>, and <Imposta>.
-9.  For DatiPagamento, use ModalitaPagamento 'MP05' (Bonifico) and include the company's IBAN. Set DataScadenzaPagamento to the invoice date.
+9.  For <DatiPagamento>, set <CondizioniPagamento> to 'TP02'. Then, inside a <DettaglioPagamento> block, set <ModalitaPagamento> to 'MP05' (Bonifico), <DataScadenzaPagamento> to the invoice date, <ImportoPagamento> to the invoice grand total ({{invoice.total}}), and include the company's <IBAN> ({{company.iban}}). Do not use <DatiRicezione>.
 10. Ensure all numeric values are formatted to 2 decimal places with a period separator (e.g., 12.34).
 11. Your final output MUST be a valid JSON object containing a single key "xml". The value must be the complete XML document as a string. Do not include any other text, comments, markdown backticks, or explanations. Example: {"xml": "<?xml version=..."}`,
 });
