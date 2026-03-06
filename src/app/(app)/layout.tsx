@@ -31,7 +31,7 @@ export default function AppLayout({
     return (
         <div className="flex h-screen w-screen items-center justify-center">
             <div className="flex flex-col items-center gap-4 p-4">
-                <Logo className="w-32" />
+                <Logo className="w-24" />
                 <p className="text-muted-foreground">Connessione ai servizi...</p>
                 <Skeleton className="h-4 w-48" />
             </div>
