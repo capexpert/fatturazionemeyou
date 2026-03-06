@@ -9,7 +9,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
-import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { useEffect, useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -56,7 +55,8 @@ export default function LoginPage() {
             toast({
               variant: 'destructive',
               title: 'Accesso Negato',
-              description: 'Il tuo account non ha i permessi di amministratore.',
+              description: `Il tuo account (UID: ${user.uid}) non ha i permessi di amministratore. Controlla che l'UID sia corretto nella collezione 'roles_admin' in Firestore.`,
+              duration: 9000,
             });
             setIsVerifying(false);
           }
@@ -102,7 +102,8 @@ export default function LoginPage() {
         toast({
           variant: 'destructive',
           title: 'Accesso Negato',
-          description: 'Non disponi dei permessi di amministratore per accedere.',
+          description: `Il tuo account (UID: ${loggedInUser.uid}) non ha i permessi di amministratore. Controlla che l'UID sia corretto nella collezione 'roles_admin' in Firestore.`,
+          duration: 9000,
         });
       }
 
@@ -177,12 +178,6 @@ export default function LoginPage() {
                 </Button>
               </form>
             </Form>
-            <div className="mt-4 text-center text-sm">
-              Non hai un account?{' '}
-              <Link href="/signup" className="underline">
-                Registrati
-              </Link>
-            </div>
           </div>
         </div>
       </div>
