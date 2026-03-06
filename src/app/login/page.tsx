@@ -55,7 +55,7 @@ export default function LoginPage() {
             toast({
               variant: 'destructive',
               title: 'Accesso Negato',
-              description: `Il tuo account (UID: ${user.uid}) non ha i permessi di amministratore. Controlla che l'UID sia corretto nella collezione 'roles_admin' in Firestore.`,
+              description: `Il tuo account non ha i permessi di amministratore. Controlla che il documento con questo UID esista nella collezione 'roles_admin': ${user.uid}`,
               duration: 9000,
             });
             setIsVerifying(false);
@@ -96,13 +96,13 @@ export default function LoginPage() {
       const adminDocSnap = await getDoc(adminDocRef);
 
       if (adminDocSnap.exists()) {
-        setIsVerifying(true);
+        setIsVerifying(true); // This will trigger the useEffect to redirect
       } else {
         await auth.signOut();
         toast({
           variant: 'destructive',
           title: 'Accesso Negato',
-          description: `Il tuo account (UID: ${loggedInUser.uid}) non ha i permessi di amministratore. Controlla che l'UID sia corretto nella collezione 'roles_admin' in Firestore.`,
+          description: `Il tuo account non ha i permessi di amministratore. Controlla che il documento con questo UID esista nella collezione 'roles_admin': ${loggedInUser.uid}`,
           duration: 9000,
         });
       }

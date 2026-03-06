@@ -57,19 +57,20 @@ export default function SignupPage() {
     }
     try {
         // Crea l'utente
-        await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const newUser = userCredential.user;
+
+        // Informa l'utente su cosa fare dopo.
+        toast({
+            title: 'Registrazione completata',
+            description: `Il tuo account è stato creato (UID: ${newUser.uid}). Contatta un amministratore per ottenere l'accesso.`,
+            duration: 9000,
+        });
         
         // Disconnetti immediatamente il nuovo utente.
         if (auth.currentUser) {
           await auth.signOut();
         }
-
-        // Informa l'utente su cosa fare dopo.
-        toast({
-            title: 'Registrazione completata',
-            description: "Il tuo account è stato creato. Contatta un amministratore per ottenere l'accesso.",
-            duration: 5000,
-        });
 
         // Reindirizza alla pagina di login
         router.push('/login');
