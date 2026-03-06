@@ -78,12 +78,12 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
-        <CardHeader className="text-center p-4">
+        <CardHeader className="text-center p-6 pb-2">
           <Logo className="mx-auto mb-4 w-24" />
           <CardTitle>Crea un Account</CardTitle>
           <CardDescription>Inserisci i tuoi dati per registrarti.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
