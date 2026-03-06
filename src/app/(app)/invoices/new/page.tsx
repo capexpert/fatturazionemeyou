@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { InvoiceForm } from "@/components/forms/invoice-form";
-import { useFirestore } from "@/firebase";
+import { useFirestore, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import type { Invoice } from "@/lib/types";
 import { useEffect, useState } from "react";
@@ -14,8 +14,12 @@ export default function NewInvoicePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchNextInvoiceNumber() {
-      if (!firestore) return;
+    function fetchNextInvoiceNumber() {
+      if (!firestore) {
+        setNextInvoiceNumber(`1/${new Date().getFullYear()}`);
+        setIsLoading(false);
+        return;
+      }
 
       const currentYear = new Date().getFullYear();
       const invoicesRef = collection(firestore, 'invoices');
@@ -25,27 +29,35 @@ export default function NewInvoicePage() {
         where('year', '==', currentYear)
       );
 
-      try {
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
-          setNextInvoiceNumber(`1/${currentYear}`);
-        } else {
-          let maxNumber = 0;
-          querySnapshot.forEach(doc => {
-            const invoice = doc.data() as Invoice;
-            const num = parseInt(invoice.number.split('/')[0]);
-            if (num > maxNumber) {
-              maxNumber = num;
-            }
+      setIsLoading(true);
+      getDocs(q)
+        .then(querySnapshot => {
+          if (querySnapshot.empty) {
+            setNextInvoiceNumber(`1/${currentYear}`);
+          } else {
+            let maxNumber = 0;
+            querySnapshot.forEach(doc => {
+              const invoice = doc.data() as Invoice;
+              const num = parseInt(invoice.number.split('/')[0]);
+              if (num > maxNumber) {
+                maxNumber = num;
+              }
+            });
+            setNextInvoiceNumber(`${maxNumber + 1}/${currentYear}`);
+          }
+        })
+        .catch(e => {
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path: invoicesRef.path,
           });
-          setNextInvoiceNumber(`${maxNumber + 1}/${currentYear}`);
-        }
-      } catch (e) {
-        console.error("Error fetching next invoice number: ", e);
-        setNextInvoiceNumber(`1/${currentYear}`); // fallback
-      } finally {
-        setIsLoading(false);
-      }
+          errorEmitter.emit('permission-error', contextualError);
+          // fallback
+          setNextInvoiceNumber(`1/${currentYear}`);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
 
     fetchNextInvoiceNumber();
