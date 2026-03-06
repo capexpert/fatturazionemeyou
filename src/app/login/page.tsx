@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -45,6 +44,15 @@ export default function LoginPage() {
 
   async function onSubmit(data: LoginFormData) {
     setIsSubmitting(true);
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Servizio di autenticazione non disponibile.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       // The useEffect will handle redirection
@@ -58,6 +66,7 @@ export default function LoginPage() {
         title: 'Errore di accesso',
         description,
       });
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -74,16 +83,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center p-6">
-          <Logo className="mx-auto mb-4 w-24" />
-          <CardTitle>Accedi</CardTitle>
-          <CardDescription>Inserisci le tue credenziali per entrare.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+      <div className="flex items-center justify-center py-12">
+        <div className="mx-auto grid w-[350px] gap-6">
+          <div className="grid gap-4 text-center">
+            <Logo className="mx-auto w-32" />
+            <h1 className="text-3xl font-bold">Accedi</h1>
+            <p className="text-balance text-muted-foreground">
+              Inserisci le tue credenziali per entrare.
+            </p>
+          </div>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -115,14 +126,15 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-          <p className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-4 text-center text-sm">
             Non hai un account?{' '}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
+            <Link href="/signup" className="underline">
               Registrati
             </Link>
-          </p>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
+      <div className="hidden bg-muted lg:block" />
     </div>
   );
 }
