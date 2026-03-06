@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { Logo } from '@/components/logo';
 import { useEffect, useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 const LoginSchema = z.object({
@@ -43,6 +43,21 @@ export default function LoginPage() {
     },
   });
 
+  const verifyAdminStatus = async (userToVerify: User) => {
+    if (!firestore) return false;
+    try {
+        const companyDocRef = doc(firestore, 'company', 'main-company');
+        // This getDoc will be evaluated against Firestore security rules.
+        // If it succeeds, the user has read access, which means isAdmin() is true.
+        await getDoc(companyDocRef);
+        return true;
+    } catch (error) {
+        // The getDoc failed, most likely due to security rules. The user is not an admin.
+        console.error("Admin verification failed:", error);
+        return false;
+    }
+  };
+
   useEffect(() => {
     if (isUserLoading || !firestore || !auth) {
       return;
@@ -50,12 +65,10 @@ export default function LoginPage() {
 
     const verifyUser = async () => {
       if (user) {
-        const adminDocRef = doc(firestore, 'roles_admin', user.uid);
-        try {
-          const adminDocSnap = await getDoc(adminDocRef);
-          if (adminDocSnap.exists()) {
+        const isAdmin = await verifyAdminStatus(user);
+        if (isAdmin) {
             router.replace('/dashboard');
-          } else {
+        } else {
             await auth.signOut();
             setLoginError({
                 title: 'Accesso Negato',
@@ -63,14 +76,6 @@ export default function LoginPage() {
                 uid: user.uid
             });
             setIsVerifying(false);
-          }
-        } catch (error) {
-           await auth.signOut();
-           setLoginError({
-              title: 'Errore di Permessi',
-              description: 'Impossibile verificare il ruolo di amministratore. Controlla le regole di sicurezza o contatta il supporto.',
-           });
-           setIsVerifying(false);
         }
       } else {
         setIsVerifying(false);
@@ -96,10 +101,9 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const loggedInUser = userCredential.user;
 
-      const adminDocRef = doc(firestore, 'roles_admin', loggedInUser.uid);
-      const adminDocSnap = await getDoc(adminDocRef);
+      const isAdmin = await verifyAdminStatus(loggedInUser);
 
-      if (adminDocSnap.exists()) {
+      if (isAdmin) {
         setIsVerifying(true); // This will trigger the useEffect to redirect
       } else {
         await auth.signOut();
@@ -113,7 +117,7 @@ export default function LoginPage() {
     } catch (error: any) {
       let description = "Si è verificato un errore inaspettato.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        description = "Credenziali non valide. Riprova. Se hai appena creato l'account, assicurati che un amministratore ti abbia concesso i permessi.";
+        description = "Credenziali non valide. Riprova.";
       }
       setLoginError({ title: 'Errore di accesso', description });
     } finally {
