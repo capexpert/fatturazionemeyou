@@ -23,6 +23,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -84,11 +85,13 @@ export function InvoiceForm({ invoice, nextInvoiceNumber }: InvoiceFormProps) {
           id: invoice.id,
           client_id: invoice.client_id,
           date: new Date(invoice.date),
+          cup: invoice.cup || '',
           items: getInitialItems(),
         }
       : {
           client_id: '',
           date: new Date(),
+          cup: '',
           items: getInitialItems(),
         },
   });
@@ -157,6 +160,7 @@ const handleSaveInvoice = async (data: InvoiceFormData) => {
         year: data.date.getFullYear(),
         date: data.date.toISOString(),
         client_id: data.client_id,
+        cup: data.cup || '',
         companyId: 'main-company', // Fixed for single-tenant
         subtotal,
         vat_total: vatTotal,
@@ -215,7 +219,7 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
     const xmlInput: GenerateFatturaPAXMLInput = {
         company: { ...company, company_name: company.company_name, vat_number: company.vat_number, tax_code: company.tax_code, pec_email: company.pec_email, regime_fiscale: company.regime_fiscale },
         client: { ...selectedClient, name: selectedClient.name, address: selectedClient.address, city: selectedClient.city, province: selectedClient.province, zip: selectedClient.zip, country: selectedClient.country, sdi_code: selectedClient.sdi_code || '0000000', pec: selectedClient.pec || undefined, },
-        invoice: { number: savedInvoice.number, date: format(new Date(savedInvoice.date), 'yyyy-MM-dd'), subtotal: savedInvoice.subtotal, vat_total: savedInvoice.vat_total, total: savedInvoice.total, currency: 'EUR' },
+        invoice: { number: savedInvoice.number, date: format(new Date(savedInvoice.date), 'yyyy-MM-dd'), cup: savedInvoice.cup, subtotal: savedInvoice.subtotal, vat_total: savedInvoice.vat_total, total: savedInvoice.total, currency: 'EUR' },
         invoice_items: savedInvoice.items.map(item => ({ title: item.title, description: item.description, quantity: item.quantity, unit_price: item.unit_price, vat_rate: item.vat_rate, line_total: item.quantity * item.unit_price, })),
         dati_riepilogo: Object.values(datiRiepilogo),
     };
@@ -344,6 +348,24 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
                         <Input disabled value={invoice ? invoice.number : nextInvoiceNumber} />
                     </FormControl>
                 </FormItem>
+            </div>
+            <div className="pt-4">
+                <FormField
+                    control={form.control}
+                    name="cup"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Codice CUP (opzionale)</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Es. C46125001440008" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormDescription>
+                            Codice Unico di Progetto, se richiesto dal cliente (es. Pubblica Amministrazione).
+                        </FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </div>
             </CardContent>
         </Card>

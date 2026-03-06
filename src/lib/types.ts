@@ -44,6 +44,7 @@ export type Invoice = {
   date: string; // YYYY-MM-DD
   client_id: string;
   companyId: string;
+  cup?: string;
   subtotal: number;
   vat_total: number;
   total: number;

@@ -54,6 +54,7 @@ export const InvoiceSchema = z.object({
   id: z.string().optional(),
   client_id: z.string().min(1, "Seleziona un cliente."),
   date: z.date({ required_error: "La data della fattura è obbligatoria." }),
+  cup: z.string().optional(),
   items: z.array(InvoiceItemSchema).min(1, "La fattura deve contenere almeno un articolo."),
 });
 

@@ -161,6 +161,10 @@
           "type": "string",
           "description": "Reference to Client. (Relationship: Client 1:N Invoice)"
         },
+        "cup": {
+          "type": "string",
+          "description": "The 'Codice Unico di Progetto' (CUP), if applicable for public projects."
+        },
         "subtotal": {
           "type": "number",
           "description": "The sum of all invoice item line totals before VAT is applied."

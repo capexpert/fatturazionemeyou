@@ -52,6 +52,7 @@ export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;
 const InvoiceDataSchema = z.object({
   number: z.string().describe('The invoice number (e.g., "1/2026").'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('The invoice date in YYYY-MM-DD format.'),
+  cup: z.string().optional().describe("The 'Codice Unico di Progetto' (CUP), if applicable."),
   subtotal: z.number().describe('The total taxable amount before VAT.'),
   vat_total: z.number().describe('The total VAT amount for the invoice.'),
   total: z.number().describe('The grand total of the invoice including VAT.'),
@@ -112,14 +113,15 @@ Guidelines:
 2.  FormatoTrasmissione: 'FPR12'.
 3.  ProgressivoInvio: Extract the number from \`invoice.number\` (the part before the '/') and pad it with leading zeros to 5 digits. For example, if \`invoice.number\` is '1/2026', use '00001'.
 4.  CodiceDestinatario: Use "{{client.sdi_code}}". If it is '0000000', also include <PECDestinatario>{{client.pec}}</PECDestinatario>.
-5.  TipoDocumento: 'TD01'
-6.  Divisa: '{{invoice.currency}}'
-7.  For each item in 'invoice_items', create a <DettaglioLinee> block.
-8.  Inside each <DettaglioLinee>, create the <Descrizione> tag by combining the 'title' and 'description' fields in the format: "title - description".
-9.  Use the pre-calculated VAT summary from 'dati_riepilogo' to create the <DatiRiepilogo> block. For each item in the summary, create a block with <AliquotaIVA>, <ImponibileImporto>, and <Imposta>.
-10. For <DatiPagamento>, set <CondizioniPagamento> to 'TP02'. Then, inside a <DettaglioPagamento> block, set <ModalitaPagamento> to 'MP05' (Bonifico), <DataScadenzaPagamento> to the invoice date, <ImportoPagamento> to the invoice grand total ({{invoice.total}}), and include the company's <IBAN> ({{company.iban}}). Do not use <DatiRicezione>.
-11. Ensure all numeric values are formatted to 2 decimal places with a period separator (e.g., 12.34).
-12. Your final output MUST be a valid JSON object containing a single key "xml". The value must be the complete XML document as a string. Do not include any other text, comments, markdown backticks, or explanations. Example: {"xml": "<?xml version=..."}`,
+5.  CUP: If a 'cup' code is provided in the 'invoice' object and it's not an empty string, you MUST include a <DatiOrdineAcquisto> block within <DatiGenerali>. Inside it, place a <CodiceCUP> tag with the value of 'invoice.cup'. This block should be located after <DatiGeneraliDocumento>.
+6.  TipoDocumento: 'TD01'
+7.  Divisa: '{{invoice.currency}}'
+8.  For each item in 'invoice_items', create a <DettaglioLinee> block.
+9.  Inside each <DettaglioLinee>, create the <Descrizione> tag by combining the 'title' and 'description' fields in the format: "title - description".
+10. Use the pre-calculated VAT summary from 'dati_riepilogo' to create the <DatiRiepilogo> block. For each item in the summary, create a block with <AliquotaIVA>, <ImponibileImporto>, and <Imposta>.
+11. For <DatiPagamento>, set <CondizioniPagamento> to 'TP02'. Then, inside a <DettaglioPagamento> block, set <ModalitaPagamento> to 'MP05' (Bonifico), <DataScadenzaPagamento> to the invoice date, <ImportoPagamento> to the invoice grand total ({{invoice.total}}), and include the company's <IBAN> ({{company.iban}}). Do not use <DatiRicezione>.
+12. Ensure all numeric values are formatted to 2 decimal places with a period separator (e.g., 12.34).
+13. Your final output MUST be a valid JSON object containing a single key "xml". The value must be the complete XML document as a string. Do not include any other text, comments, markdown backticks, or explanations. Example: {"xml": "<?xml version=..."}`,
 });
 
 const generateFatturaPAXMLFlow = ai.defineFlow(
