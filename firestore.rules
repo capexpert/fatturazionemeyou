@@ -10,9 +10,22 @@ service cloud.firestore {
       return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // Secure all collections.
-    // Allow access only if the user is an admin.
-    match /{document=**} {
+    // This rule is necessary for the isAdmin() function to work. It allows any
+    // authenticated user to check for the *existence* of an admin role document
+    // without being able to read its (non-existent) content or list all admins.
+    match /roles_admin/{uid} {
+      allow get: if request.auth != null;
+    }
+
+    // Secure the main data collections.
+    // Only admins can read or write documents.
+    match /company/{companyId} {
+      allow read, write: if isAdmin();
+    }
+    match /clients/{clientId} {
+      allow read, write: if isAdmin();
+    }
+    match /invoices/{invoiceId} {
       allow read, write: if isAdmin();
     }
   }
