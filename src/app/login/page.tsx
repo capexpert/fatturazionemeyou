@@ -59,7 +59,7 @@ export default function LoginPage() {
             await auth.signOut();
             setLoginError({
                 title: 'Accesso Negato',
-                description: "Il tuo account non ha i permessi di amministratore. Per risolvere, crea un documento nella collezione 'roles_admin' in Firestore usando l'UID sottostante come ID del documento.",
+                description: `Il tuo account non ha i permessi di amministratore. Assicurati che l'UID nella collezione 'roles_admin' sia corretto.`,
                 uid: user.uid
             });
             setIsVerifying(false);
@@ -113,7 +113,7 @@ export default function LoginPage() {
     } catch (error: any) {
       let description = "Si è verificato un errore inaspettato.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        description = "Credenziali non valide. Riprova.";
+        description = "Credenziali non valide. Riprova. Se hai appena creato l'account, assicurati che un amministratore ti abbia concesso i permessi.";
       }
       setLoginError({ title: 'Errore di accesso', description });
     } finally {
@@ -153,7 +153,7 @@ export default function LoginPage() {
                         {loginError.description}
                         {loginError.uid && (
                             <div className="mt-4">
-                                <Label htmlFor="uid-error">UID Account per l'accesso:</Label>
+                                <Label htmlFor="uid-error">Il tuo UID per la configurazione:</Label>
                                 <Input id="uid-error" readOnly value={loginError.uid} className="mt-1 font-mono" onClick={(e) => e.currentTarget.select()} />
                             </div>
                         )}
