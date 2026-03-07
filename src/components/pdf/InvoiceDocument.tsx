@@ -45,6 +45,11 @@ const styles = StyleSheet.create({
   text: {
     marginBottom: 3,
   },
+  itemDescription: {
+    fontSize: 8,
+    color: '#666',
+    marginTop: 2,
+  },
   table: {
     display: 'flex',
     width: 'auto',
@@ -146,6 +151,7 @@ export function InvoiceDocument({ invoice, company, client }: InvoiceDocumentPro
                         <Text style={styles.title}>Fattura</Text>
                         <Text style={styles.text}>Numero: {invoice.number}</Text>
                         <Text style={styles.text}>Data: {format(new Date(invoice.date), 'dd/MM/yyyy')}</Text>
+                        {invoice.cup && <Text style={styles.text}>CUP: {invoice.cup}</Text>}
                     </View>
                 </View>
 
@@ -170,9 +176,12 @@ export function InvoiceDocument({ invoice, company, client }: InvoiceDocumentPro
                         <View style={[styles.tableColHeader, styles.colTotal]}><Text>Totale</Text></View>
                     </View>
                     {/* Table Body */}
-                    {invoice.items.map(item => (
+                    {invoice.items && invoice.items.map(item => (
                         <View key={item.id} style={styles.tableRow}>
-                            <View style={[styles.tableCol, styles.colDescription]}><Text>{item.title}</Text></View>
+                            <View style={[styles.tableCol, styles.colDescription]}>
+                                <Text>{item.title}</Text>
+                                {item.description && <Text style={styles.itemDescription}>{item.description}</Text>}
+                            </View>
                             <View style={[styles.tableCol, styles.colQty]}><Text>{item.quantity}</Text></View>
                             <View style={[styles.tableCol, styles.colPrice]}><Text>{formatCurrency(item.unit_price)}</Text></View>
                             <View style={[styles.tableCol, styles.colVat]}><Text>{item.vat_rate}%</Text></View>
