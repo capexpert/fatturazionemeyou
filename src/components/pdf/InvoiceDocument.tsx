@@ -136,6 +136,9 @@ interface InvoiceDocumentProps {
 }
 
 export function InvoiceDocument({ invoice, company, client }: InvoiceDocumentProps) {
+    const meyouIban = "IT39O0326811702052447879470";
+    const displayIban = company.iban || (company.company_name?.toLowerCase().includes('meyou') ? meyouIban : '');
+
     return (
         <Document>
             <Page size="A4" style={styles.page}>
@@ -146,6 +149,7 @@ export function InvoiceDocument({ invoice, company, client }: InvoiceDocumentPro
                         <Text style={styles.text}>{company.zip}, {company.city} ({company.province})</Text>
                         <Text style={styles.text}>P.IVA: {company.vat_number}</Text>
                         <Text style={styles.text}>C.F: {company.tax_code}</Text>
+                        {displayIban && <Text style={styles.text}>IBAN: {displayIban}</Text>}
                     </View>
                     <View style={styles.invoiceDetails}>
                         <Text style={styles.title}>Fattura</Text>
@@ -155,15 +159,25 @@ export function InvoiceDocument({ invoice, company, client }: InvoiceDocumentPro
                     </View>
                 </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.subtitle}>Cliente:</Text>
-                    <View style={styles.clientDetails}>
-                        <Text style={styles.text}>{client.name}</Text>
-                        <Text style={styles.text}>{client.address}</Text>
-                        <Text style={styles.text}>{client.zip}, {client.city} ({client.province})</Text>
-                        {client.vat_number && <Text style={styles.text}>P.IVA: {client.vat_number}</Text>}
-                        {client.tax_code && <Text style={styles.text}>C.F: {client.tax_code}</Text>}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <View style={styles.section}>
+                        <Text style={styles.subtitle}>Cliente:</Text>
+                        <View style={styles.clientDetails}>
+                            <Text style={styles.text}>{client.name}</Text>
+                            <Text style={styles.text}>{client.address}</Text>
+                            <Text style={styles.text}>{client.zip}, {client.city} ({client.province})</Text>
+                            {client.vat_number && <Text style={styles.text}>P.IVA: {client.vat_number}</Text>}
+                            {client.tax_code && <Text style={styles.text}>C.F: {client.tax_code}</Text>}
+                        </View>
                     </View>
+                    
+                    {displayIban && (
+                        <View style={styles.section}>
+                            <Text style={styles.subtitle}>Metodo di pagamento:</Text>
+                            <Text style={styles.text}>Bonifico Bancario</Text>
+                            <Text style={styles.text}>IBAN: {displayIban}</Text>
+                        </View>
+                    )}
                 </View>
                 
                 <View style={styles.table}>

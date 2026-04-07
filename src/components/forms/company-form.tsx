@@ -207,7 +207,7 @@ export function CompanyForm({ company }: { company: Company | null }) {
                     <FormItem>
                     <FormLabel>IBAN</FormLabel>
                     <FormControl>
-                        <Input placeholder="IT..." {...field} />
+                        <Input placeholder="IT39O0326811702052447879470" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
