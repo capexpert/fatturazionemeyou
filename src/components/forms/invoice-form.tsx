@@ -217,7 +217,15 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
     }, {} as Record<number, { imponibile: number, imposta: number, aliquota: number }>);
 
     const xmlInput: GenerateFatturaPAXMLInput = {
-        company: { ...company, company_name: company.company_name, vat_number: company.vat_number, tax_code: company.tax_code, pec_email: company.pec_email, regime_fiscale: company.regime_fiscale },
+        company: { 
+            ...company, 
+            company_name: company.company_name, 
+            vat_number: company.vat_number, 
+            tax_code: company.tax_code, 
+            pec_email: company.pec_email, 
+            regime_fiscale: company.regime_fiscale,
+            iban: company.iban || (company.company_name?.toLowerCase().includes('meyou') ? 'IT39O0326811702052447879470' : undefined)
+        },
         client: { ...selectedClient, name: selectedClient.name, address: selectedClient.address, city: selectedClient.city, province: selectedClient.province, zip: selectedClient.zip, country: selectedClient.country, sdi_code: selectedClient.sdi_code || '0000000', pec: selectedClient.pec || undefined, },
         invoice: { number: savedInvoice.number, date: format(new Date(savedInvoice.date), 'yyyy-MM-dd'), cup: savedInvoice.cup, subtotal: savedInvoice.subtotal, vat_total: savedInvoice.vat_total, total: savedInvoice.total, currency: 'EUR' },
         invoice_items: savedInvoice.items.map(item => ({ title: item.title, description: item.description, quantity: item.quantity, unit_price: item.unit_price, vat_rate: item.vat_rate, line_total: item.quantity * item.unit_price, })),
@@ -237,8 +245,13 @@ const generateAndAttachXML = async (savedInvoice: Omit<Invoice, 'client'>) => {
             throw new Error(xmlResult.message || 'La generazione del file XML è fallita.');
         }
     } catch(err) {
+        console.error("XML Generation Detail Error:", err);
         const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
-        toast({ variant: 'destructive', title: 'Errore Generazione XML', description: errorMessage });
+        toast({ 
+            variant: 'destructive', 
+            title: 'Errore Generazione XML', 
+            description: `Dettaglio: ${errorMessage}. Verifica che i dati aziendali siano completi nelle impostazioni.` 
+        });
     }
 };
 

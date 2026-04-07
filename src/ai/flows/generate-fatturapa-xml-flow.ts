@@ -20,7 +20,7 @@ const CompanySchema = z.object({
   zip: z.string().describe('The postal code of the company.'),
   country: z.string().describe('The country of the company (e.g., IT).'),
   pec_email: z.string().email().describe('The PEC email address of the company.'),
-  iban: z.string().describe('The IBAN of the company for payments.'),
+  iban: z.string().optional().describe('The IBAN of the company for payments.'),
   regime_fiscale: z.string().describe('The fiscal regime code (e.g., RF01).'),
 });
 export type Company = z.infer<typeof CompanySchema>;
@@ -119,7 +119,7 @@ Guidelines:
 8.  For each item in 'invoice_items', create a <DettaglioLinee> block.
 9.  Inside each <DettaglioLinee>, create the <Descrizione> tag by combining the 'title' and 'description' fields in the format: "title - description".
 10. Use the pre-calculated VAT summary from 'dati_riepilogo' to create the <DatiRiepilogo> block. For each item in the summary, create a block with <AliquotaIVA>, <ImponibileImporto>, and <Imposta>.
-11. For <DatiPagamento>, set <CondizioniPagamento> to 'TP02'. Then, inside a <DettaglioPagamento> block, set <ModalitaPagamento> to 'MP05' (Bonifico), <DataScadenzaPagamento> to the invoice date, <ImportoPagamento> to the invoice grand total ({{invoice.total}}), and include the company's <IBAN> ({{company.iban}}). Do not use <DatiRicezione>.
+11. For <DatiPagamento>, set <CondizioniPagamento> to 'TP02'. Then, inside a <DettaglioPagamento> block, set <ModalitaPagamento> to 'MP05' (Bonifico), <DataScadenzaPagamento> to the invoice date, <ImportoPagamento> to the invoice grand total ({{invoice.total}}). IMPORTANT: Include the company's <IBAN>. If \`company.iban\` is provided, use it. If not, but company name contains 'meyou', use 'IT39O0326811702052447879470'. Do not use <DatiRicezione>.
 12. Ensure all numeric values are formatted to 2 decimal places with a period separator (e.g., 12.34).
 13. Your final output MUST be a valid JSON object containing a single key "xml". The value must be the complete XML document as a string. Do not include any other text, comments, markdown backticks, or explanations. Example: {"xml": "<?xml version=..."}`,
 });
@@ -131,7 +131,22 @@ const generateFatturaPAXMLFlow = ai.defineFlow(
     outputSchema: GenerateFatturaPAXMLOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    let result = await prompt(input);
+    
+    // Robust parsing for instances where the model might wrap the JSON string in markdown
+    if (!result.output && typeof result === 'string') {
+        try {
+            const jsonMatch = result.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                result = { output: JSON.parse(jsonMatch[0]) };
+            }
+        } catch (e) {
+            console.error("Failed to manual-parse JSON from raw string output during XML generation.", result);
+        }
+    }
+
+    const output = result.output;
+    
     if (!output?.xml) {
       // Log the failure and throw an error to be caught by the server action
       console.error("FatturaPA XML generation failed: Model did not return valid XML in the expected format.", output);
