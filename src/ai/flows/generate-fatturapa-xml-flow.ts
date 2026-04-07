@@ -113,7 +113,7 @@ Guidelines:
 2.  FormatoTrasmissione: 'FPR12'.
 3.  ProgressivoInvio: Extract the number from \`invoice.number\` (the part before the '/') and pad it with leading zeros to 5 digits. For example, if \`invoice.number\` is '1/2026', use '00001'.
 4.  CodiceDestinatario: Use "{{client.sdi_code}}". If it is '0000000', also include <PECDestinatario>{{client.pec}}</PECDestinatario>.
-5.  CUP: If a 'cup' code is provided in the 'invoice' object and it's not an empty string, you MUST include a <DatiOrdineAcquisto> block within <DatiGenerali>, after the <DatiGeneraliDocumento> block. Inside <DatiOrdineAcquisto>, you MUST include an <IdDocumento> tag (with a value like '1') before the <CodiceCUP> tag (with the value from 'invoice.cup').
+5.  CUP: If a 'cup' code is provided in the 'invoice' object and it's not an empty string, you MUST include a <DatiOrdineAcquisto> block within <DatiGenerali>, after the <DatiGeneraliDocumento> block. Inside <DatiOrdineAcquisto>, you MUST strictly follow the XSD sequence order: you MUST include an <IdDocumento> tag (use value '1' as a placeholder) BEFORE the <CodiceCUP> tag (with the value from 'invoice.cup'). NEVER put <CodiceCUP> as the first element of the block.
 6.  TipoDocumento: 'TD01'
 7.  Divisa: '{{invoice.currency}}'
 8.  For each item in 'invoice_items', create a <DettaglioLinee> block.
