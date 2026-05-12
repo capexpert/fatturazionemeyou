@@ -122,7 +122,8 @@ Guidelines:
 11. For <DatiPagamento>, set <CondizioniPagamento> to 'TP02'. Then, inside a <DettaglioPagamento> block, set <ModalitaPagamento> to 'MP05' (Bonifico), <DataScadenzaPagamento> to the invoice date, <ImportoPagamento> to the invoice grand total ({{invoice.total}}). IMPORTANT: Include the company's <IBAN>. If \`company.iban\` is provided, use it. If not, but company name contains 'meyou', use 'IT39O0326811702052447879470'. Do not use <DatiRicezione>.
 12. Ensure all numeric values are formatted to 2 decimal places with a period separator (e.g., 12.34).
 13. Your final output MUST be a valid JSON object containing a single key "xml". The value must be the complete XML document as a string. Do not include any other text, comments, markdown backticks, or explanations. Example: {"xml": "<?xml version=..."}
-14. For <CedentePrestatore>, the <RegimeFiscale> tag MUST be a child of <DatiAnagrafici>, NOT a direct child of <CedentePrestatore>. Structure: <CedentePrestatore> <DatiAnagrafici> ... <RegimeFiscale>{{company.regime_fiscale}}</RegimeFiscale> </DatiAnagrafici> <Sede> ... </Sede> </CedentePrestatore>.`,
+14. For <CedentePrestatore>, the <RegimeFiscale> tag MUST be a child of <DatiAnagrafici>, NOT a direct child of <CedentePrestatore>. Structure: <CedentePrestatore> <DatiAnagrafici> ... <RegimeFiscale>{{company.regime_fiscale}}</RegimeFiscale> </DatiAnagrafici> <Sede> ... </Sede> </CedentePrestatore>.
+15. For <CedentePrestatore> <Contatti>, map 'company.pec_email' to the <Email> tag, NOT <Pec>. The <Pec> tag is invalid here.`,
 });
 
 const generateFatturaPAXMLFlow = ai.defineFlow(
